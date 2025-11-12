@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.32.1
+    container_name: hermes-weaviate
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      ENABLE_MODULES: ""
+    ports:
+      - "8080:8080"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+    networks:
+      - hermes-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: hermes-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./scripts:/app/scripts
+      - ./scripts/data:/data
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - CONFIG_PATH=scripts/config.yml
+    depends_on:
+      - weaviate
+    restart: unless-stopped
+    networks:
+      - hermes-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  weaviate_data:
+
+networks:
+  hermes-network:
+    driver: bridge
