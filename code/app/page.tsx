@@ -62,7 +62,7 @@ export default function HermesChat() {
   const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null)
   const [showSetupInstructions, setShowSetupInstructions] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [backendUrl] = useState("http://localhost:8000")
+  const [backendUrl] = useState(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 3
 
@@ -77,7 +77,7 @@ export default function HermesChat() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const response = await fetch(`${backendUrl}/health`, {
+        const response = await fetch(`${backendUrl}/api/health`, {
           method: "GET",
           signal: AbortSignal.timeout(2000),
         })
@@ -114,7 +114,8 @@ export default function HermesChat() {
       }
 
       try {
-        const websocket = new WebSocket("ws://localhost:8000/ws/chat")
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+        const websocket = new WebSocket(`${wsUrl}/api/ws/chat`)
 
         websocket.onopen = () => {
           setIsConnected(true)
@@ -334,7 +335,7 @@ export default function HermesChat() {
       ws.send(JSON.stringify({ question }))
     } else {
       try {
-        const response = await fetch(`${backendUrl}/query`, {
+        const response = await fetch(`${backendUrl}/api/query`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
