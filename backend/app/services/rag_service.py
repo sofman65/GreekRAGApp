@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from langchain_core.documents import Document
 
@@ -87,44 +87,50 @@ class RAGService:
 
         return texts, scores, metas
 
-    def answer(self, question: str) -> Tuple[str, List[str], List[float], List[Dict]]:
-        self._ensure_llm()
-
-        ctx_texts, scores, metas = self.retrieve(question)
+    def _build_prompt(self, question: str, ctx_texts: List[str]) -> str:
         if ctx_texts:
             joined = "\n\n---\n\n".join(ctx_texts)
-            prompt = (
+            return (
                 "Απάντησε την ερώτηση χρησιμοποιώντας κατάλληλα αποσπάσματα εφόσον σχετίζονται.\n"
                 f"Κείμενο:\n{joined}\n\nΕρώτηση: {question}\n\n"
                 "Επέστρεψε ΜΟΝΟ την απάντηση στα ελληνικά."
             )
-        else:
-            prompt = (
-                "Απάντησε την ερώτηση που ακολουθεί στα ελληνικά."
-                f"\n\nΕρώτηση: {question}"
-            )
 
+        return (
+            "Απάντησε την ερώτηση που ακολουθεί στα ελληνικά."
+            f"\n\nΕρώτηση: {question}"
+        )
+
+    def answer(
+        self,
+        question: str,
+        ctx_texts: Optional[List[str]] = None,
+        scores: Optional[List[float]] = None,
+        metas: Optional[List[Dict]] = None,
+    ) -> Tuple[str, List[str], List[float], List[Dict]]:
+        self._ensure_llm()
+
+        if ctx_texts is None or scores is None or metas is None:
+            ctx_texts, scores, metas = self.retrieve(question)
+
+        prompt = self._build_prompt(question, ctx_texts)
         response = self._llm.answer(SYSTEM_PROMPT, prompt)
         return response, ctx_texts, scores, metas
-    
-    def stream_answer(self, question: str):
+
+    def stream_answer(
+        self,
+        question: str,
+        ctx_texts: Optional[List[str]] = None,
+        scores: Optional[List[float]] = None,
+        metas: Optional[List[Dict]] = None,
+    ):
         """Stream answer tokens from the RAG system."""
         self._ensure_llm()
 
-        ctx_texts, scores, metas = self.retrieve(question)
-        if ctx_texts:
-            joined = "\n\n---\n\n".join(ctx_texts)
-            prompt = (
-                "Απάντησε την ερώτηση χρησιμοποιώντας κατάλληλα αποσπάσματα εφόσον σχετίζονται.\n"
-                f"Κείμενο:\n{joined}\n\nΕρώτηση: {question}\n\n"
-                "Επέστρεψε ΜΟΝΟ την απάντηση στα ελληνικά."
-            )
-        else:
-            prompt = (
-                "Απάντησε την ερώτηση που ακολουθεί στα ελληνικά."
-                f"\n\nΕρώτηση: {question}"
-            )
+        if ctx_texts is None or scores is None or metas is None:
+            ctx_texts, scores, metas = self.retrieve(question)
+
+        prompt = self._build_prompt(question, ctx_texts)
 
         for token in self._llm.stream_answer(SYSTEM_PROMPT, prompt):
             yield token
-

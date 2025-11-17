@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def query(request: QueryRequest, req: Request):
     """Non-streaming query endpoint for RAG system"""
     
-    rag_service = req.app.state.rag_service
+    orchestrator = getattr(req.app.state, "query_orchestrator", None)
     
     if not request.question:
         return JSONResponse(
@@ -24,29 +24,35 @@ async def query(request: QueryRequest, req: Request):
             status_code=400
         )
     
-    # Demo mode if RAG service not available
-    if not rag_service:
+    # Demo mode if orchestrator not available
+    if not orchestrator:
         return QueryResponse(
             answer="Το σύστημα RAG δεν είναι διαθέσιμο. Παρακαλώ ρυθμίστε το Weaviate και το Ollama.",
             sources=[],
-            demo_mode=True
+            demo_mode=True,
+            mode="demo",
+            label="DEMO",
         )
     
     try:
-        answer, context, scores, metas = rag_service.answer(request.question)
+        outcome = orchestrator.answer_question(request.question)
         
         sources = []
-        for text, score, meta in zip(context, scores, metas):
-            sources.append(SourceInfo(
-                text=text[:200] + "..." if len(text) > 200 else text,
-                score=score,
-                source=meta.get("source", "Άγνωστη πηγή")
-            ))
+        for text, score, meta in zip(outcome.ctx_texts, outcome.scores, outcome.metas):
+            sources.append(
+                SourceInfo(
+                    text=text[:200] + "..." if len(text) > 200 else text,
+                    score=score,
+                    source=meta.get("source", "Άγνωστη πηγή"),
+                )
+            )
         
         return QueryResponse(
-            answer=answer,
+            answer=outcome.answer,
             sources=sources,
-            demo_mode=False
+            demo_mode=False,
+            mode=outcome.mode,
+            label=outcome.label,
         )
         
     except Exception as e:
@@ -63,7 +69,7 @@ async def websocket_chat(websocket: WebSocket):
     await websocket.accept()
     
     try:
-        rag_service = websocket.app.state.rag_service
+        orchestrator = getattr(websocket.app.state, "query_orchestrator", None)
         
         while True:
             data = await websocket.receive_json()
@@ -73,7 +79,7 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_json({"error": "No question provided"})
                 continue
             
-            if not rag_service:
+            if not orchestrator:
                 await websocket.send_json({
                     "type": "error",
                     "content": "Το σύστημα RAG δεν είναι διαθέσιμο."
@@ -81,11 +87,27 @@ async def websocket_chat(websocket: WebSocket):
                 continue
             
             try:
-                # Send sources first
-                ctx_texts, scores, metas = rag_service.retrieve(question)
-                sources = []
+                plan = orchestrator.plan_question(question)
                 
-                for text, score, meta in zip(ctx_texts, scores, metas):
+                if plan.mode != "rag":
+                    outcome = orchestrator.fulfill_plan(plan)
+                    await websocket.send_json({
+                        "type": "sources",
+                        "sources": [],
+                        "mode": outcome.mode,
+                        "label": outcome.label,
+                    })
+                    await websocket.send_json({
+                        "type": "token",
+                        "content": outcome.answer,
+                        "mode": outcome.mode,
+                        "label": outcome.label,
+                    })
+                    await websocket.send_json({"type": "done", "mode": outcome.mode})
+                    continue
+                
+                sources = []
+                for text, score, meta in zip(plan.ctx_texts, plan.scores, plan.metas):
                     sources.append({
                         "text": text[:200] + "..." if len(text) > 200 else text,
                         "score": score,
@@ -94,18 +116,23 @@ async def websocket_chat(websocket: WebSocket):
                 
                 await websocket.send_json({
                     "type": "sources",
-                    "sources": sources
+                    "sources": sources,
+                    "mode": plan.mode,
+                    "label": plan.label,
                 })
                 
-                # Stream the answer
-                for token in rag_service.stream_answer(question):
+                for token in orchestrator.stream_plan(plan):
                     await websocket.send_json({
                         "type": "token",
-                        "content": token
+                        "content": token,
+                        "mode": plan.mode,
+                        "label": plan.label,
                     })
                 
                 await websocket.send_json({
-                    "type": "done"
+                    "type": "done",
+                    "mode": plan.mode,
+                    "label": plan.label,
                 })
                 
             except Exception as e:
@@ -126,4 +153,3 @@ async def websocket_chat(websocket: WebSocket):
             })
         except:
             pass
-

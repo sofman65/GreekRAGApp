@@ -2,8 +2,8 @@
 Query and response models
 """
 
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List
 
 
 class QueryRequest(BaseModel):
@@ -21,6 +21,7 @@ class SourceInfo(BaseModel):
 class QueryResponse(BaseModel):
     """Query response model"""
     answer: str
-    sources: List[SourceInfo] = []
+    sources: List[SourceInfo] = Field(default_factory=list)
     demo_mode: bool = False
-
+    mode: str = "rag"
+    label: str = "NEED_RAG"

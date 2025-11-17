@@ -2,9 +2,12 @@
 
 <div align="center">
 
-![Ερμής](code/public/icon.svg)
+![Ερμής - Archimedes Logo](code/public/ketak-sima.png)
 
 **Retrieval-Augmented Generation System for Greek Military Regulations**
+
+*"ΔΟΣ ΜΟΙ ΠΑ ΣΤΩ ΚΑΙ ΤΑΝ ΓΑΝ ΚΙΝΑΣΩ"*  
+*"Give me a place to stand, and I shall move the Earth"* - Archimedes
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-16.0-black.svg)](https://nextjs.org/)

@@ -28,3 +28,15 @@ llm:
   model: "llama3.2"
   temperature: 0.1
 
+chat_llm:
+  provider: "ollama"
+  model: "mistral"
+  temperature: 0.2
+
+router:
+  enabled: true
+  min_score: 0.4
+  llm:
+    provider: "ollama"
+    model: "llama3.2"
+    temperature: 0.0

@@ -6,7 +6,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, H
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from pathlib import Path
 import os
 import logging
 
@@ -17,7 +16,7 @@ from app.core.middleware import (
     RequestLoggingMiddleware
 )
 from app.api.routes import auth, query, health, upload
-from app.services.rag_service import RAGService
+from app.services.query_orchestrator import QueryOrchestrator
 
 # Setup logging
 logging.basicConfig(
@@ -62,26 +61,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize RAG service
+# Initialize services
 rag_service = None
+query_orchestrator = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
-    global rag_service
+    global rag_service, query_orchestrator
     
     try:
         config_path = os.getenv("CONFIG_PATH", "backend/config/config.yml")
-        rag_service = RAGService(config_path)
-        logger.info(f"✓ RAG Service initialized with config: {config_path}")
+        query_orchestrator = QueryOrchestrator(config_path)
+        rag_service = query_orchestrator.rag_service
+        logger.info(f"✓ Query Orchestrator initialized with config: {config_path}")
         
         # Store in app state for access in routes
         app.state.rag_service = rag_service
+        app.state.query_orchestrator = query_orchestrator
         
     except Exception as e:
-        logger.warning(f"⚠ Could not initialize RAG service: {e}")
+        logger.warning(f"⚠ Could not initialize RAG services: {e}")
         logger.warning("  The API will run in demo mode.")
         app.state.rag_service = None
+        app.state.query_orchestrator = None
 
 
 @app.on_event("shutdown")
