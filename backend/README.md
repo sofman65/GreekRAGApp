@@ -141,13 +141,13 @@ llm:
 ./scripts/start.sh
 
 # Or manually
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 
 ### Production Mode
 
 ```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 The API will be available at:

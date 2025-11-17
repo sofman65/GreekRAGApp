@@ -402,10 +402,21 @@ export default function HermesChat() {
     conv.title.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    window.location.href = "/login"
+  const handleLogout = async () => {
+    const token = localStorage.getItem("token")
+    try {
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+      await fetch(`${backendUrl}/api/auth/logout`, {
+        method: "POST",
+        headers,
+      })
+    } catch (error) {
+      console.error("Logout request failed", error)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      window.location.href = "/login"
+    }
   }
 
   return (

@@ -22,5 +22,5 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 # Run the server
 echo "✓ Starting FastAPI server on http://localhost:8000"
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 

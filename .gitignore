@@ -43,6 +43,7 @@ backend/.env
 backend/env.local
 code/.env.local
 code/.env.production.local
+!code/.env.local.example
 
 # IDE
 .vscode/
@@ -105,4 +106,3 @@ coverage.xml
 # Documentation build
 docs/_build/
 site/
-
