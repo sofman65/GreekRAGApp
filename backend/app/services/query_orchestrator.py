@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 from typing import Dict, Generator, List, Optional
 
 from app.services.llm_providers import LLMFactory
@@ -25,7 +26,8 @@ CLASSIFY_PROMPT = (
 
 CHAT_SYSTEM_PROMPT = (
     "Είσαι μια γρήγορη βοηθός στα ελληνικά. "
-    "Απάντησε περιεκτικά και με σεβασμό στις διαδικασίες του στρατού."
+    "Απάντησε σύντομα και ευγενικά, χωρίς να αναφέρεις περιορισμούς ή πρόσβαση σε έγγραφα. "
+    "Μην επαναλαμβάνεις την ίδια φράση."
 )
 
 UNSAFE_RESPONSE = (
@@ -41,6 +43,7 @@ FALLBACK_RESPONSE = (
 )
 
 VALID_LABELS = {"NEED_RAG", "NO_RAG", "OUT_OF_SCOPE", "UNSAFE"}
+GREETINGS = ("γεια", "γειά", "χαίρετε", "hello", "hi", "hey", "καλημέρα", "καλησπέρα", "καληνύχτα")
 
 
 @dataclass
@@ -84,6 +87,20 @@ class QueryOrchestrator:
         chat_llm_cfg = self.cfg.get("chat_llm")
         self.chat_llm = LLMFactory(**chat_llm_cfg) if chat_llm_cfg else None
 
+    def _dedupe_sentences(self, text: str) -> str:
+        """Remove immediate duplicate sentences to avoid stuttering."""
+        parts = re.split(r"(?<=[.!;?])\s*", text.strip())
+        seen = set()
+        deduped = []
+        for part in parts:
+            if not part:
+                continue
+            normalized = part.strip()
+            if normalized and normalized not in seen:
+                deduped.append(normalized)
+                seen.add(normalized)
+        return " ".join(deduped)
+
     def _classify_query(self, question: str) -> str:
         if not self.router_llm:
             return "NEED_RAG"
@@ -104,9 +121,15 @@ class QueryOrchestrator:
         prompt = (
             f"Κατηγορία αιτήματος: {label}.\n"
             f"Ερώτηση: {question}\n"
-            "Απάντησε συνοπτικά στα ελληνικά και χωρίς πρόσβαση στα έγγραφα."
+            "Απάντησε συνοπτικά στα ελληνικά, χωρίς να αναφέρεσαι σε πρόσβαση στα έγγραφα ή σε περιορισμούς, "
+            "και χωρίς να επαναλαμβάνεις τον εαυτό σου."
         )
-        return self.chat_llm.answer(CHAT_SYSTEM_PROMPT, prompt)
+        answer = self.chat_llm.answer(CHAT_SYSTEM_PROMPT, prompt)
+        return self._dedupe_sentences(answer)
+
+    def _is_greeting(self, question: str) -> bool:
+        q = question.strip().lower()
+        return any(q.startswith(greet) or greet in q for greet in GREETINGS)
 
     def plan_question(self, question: str) -> QueryPlan:
         label = self._classify_query(question) if self.router_enabled else "NEED_RAG"
@@ -161,7 +184,14 @@ class QueryOrchestrator:
             return QueryOutcome(answer, ctx, scores, metas, "rag", plan.label)
 
         if plan.mode == "chat":
-            answer = plan.message or self._chat_response(plan.question, plan.label)
+            # If a message is already prepared, NEVER generate a new greeting
+            if plan.message:
+                answer = self._dedupe_sentences(plan.message)
+            elif self._is_greeting(plan.question):
+                answer = "Καλησπέρα! Πώς μπορώ να βοηθήσω;"
+            else:
+                answer = self._chat_response(plan.question, plan.label)
+            return QueryOutcome(answer, [], [], [], "chat", plan.label)
             return QueryOutcome(answer, [], [], [], "chat", plan.label)
 
         if plan.mode == "unsafe":
@@ -178,7 +208,7 @@ class QueryOrchestrator:
             )
 
         # Fallback to chat behavior
-        answer = plan.message or FALLBACK_RESPONSE
+        answer = self._dedupe_sentences(plan.message or FALLBACK_RESPONSE)
         return QueryOutcome(answer, [], [], [], "chat", plan.label)
 
     def answer_question(self, question: str) -> QueryOutcome:

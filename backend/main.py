@@ -6,6 +6,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, H
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from pathlib import Path
 import os
 import logging
 
@@ -65,13 +66,23 @@ app.add_middleware(
 rag_service = None
 query_orchestrator = None
 
+
+def _resolve_config_path() -> str:
+    """Resolve config path relative to backend directory if env not provided."""
+    env_path = os.getenv("CONFIG_PATH") or os.getenv("RAG_CONFIG_PATH")
+    if env_path:
+        return str(Path(env_path).expanduser().resolve())
+
+    base_dir = Path(__file__).resolve().parent
+    return str(base_dir / "config" / "config.yml")
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
     global rag_service, query_orchestrator
     
     try:
-        config_path = os.getenv("CONFIG_PATH", "backend/config/config.yml")
+        config_path = _resolve_config_path()
         query_orchestrator = QueryOrchestrator(config_path)
         rag_service = query_orchestrator.rag_service
         logger.info(f"✓ Query Orchestrator initialized with config: {config_path}")

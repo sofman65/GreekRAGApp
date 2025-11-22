@@ -24,15 +24,24 @@ class VectorDB:
 
         if self.backend == "weaviate":
             url = cfg["weaviate"].get("url")
+            grpc_port = cfg["weaviate"].get("grpc_port", 50051)
             if url:
                 from urllib.parse import urlparse
 
                 parsed = urlparse(url)
                 host = parsed.hostname or "localhost"
                 port = parsed.port or 8080
-                self.client = weaviate.connect_to_local(host=host, port=port)
+                self.client = weaviate.connect_to_local(
+                    host=host,
+                    port=port,
+                    grpc_port=grpc_port,
+                    skip_init_checks=True,
+                )
             else:
-                self.client = weaviate.connect_to_local()
+                self.client = weaviate.connect_to_local(
+                    grpc_port=grpc_port,
+                    skip_init_checks=True,
+                )
             self.class_name = cfg["weaviate"]["class_name"]
             self.text_key = cfg["weaviate"].get("text_key", "text")
             self._ensure_class()
@@ -94,4 +103,3 @@ class VectorDB:
             return hits
 
         return []
-

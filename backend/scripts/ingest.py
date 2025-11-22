@@ -16,7 +16,12 @@ from app.services.rag_service import RAGService
 
 
 def main() -> None:
-    config_path = os.getenv("RAG_CONFIG_PATH", "backend/config/config.yml")
+    env_cfg = os.getenv("RAG_CONFIG_PATH") or os.getenv("CONFIG_PATH")
+    if env_cfg:
+        config_path = Path(env_cfg).expanduser().resolve()
+    else:
+        base_dir = Path(__file__).resolve().parent.parent
+        config_path = base_dir / "config" / "config.yml"
     
     print("🔄 Starting document ingestion...")
     print(f"📄 Using config: {config_path}")
@@ -38,4 +43,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

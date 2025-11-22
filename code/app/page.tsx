@@ -21,6 +21,7 @@ interface Message {
   content: string
   sources?: string[]
   timestamp: Date
+  mode?: string
 }
 
 interface Conversation {
@@ -141,20 +142,24 @@ export default function HermesChat() {
         websocket.onmessage = (event) => {
           const data = JSON.parse(event.data)
 
-          if (data.type === "sources" && data.sources) {
+          if (data.type === "sources") {
             setConversations((prev) =>
               prev.map((conv) => {
                 if (conv.id === currentConversationId) {
                   const newMessages = [...conv.messages]
                   const lastMsg = newMessages[newMessages.length - 1]
                   if (lastMsg && lastMsg.role === "assistant") {
-                    lastMsg.sources = data.sources.map((s: any) => s.source)
+                    lastMsg.sources = data.sources?.map((s: any) => s.source) || []
+                    lastMsg.mode = data.mode
                   }
                   return { ...conv, messages: newMessages, updatedAt: new Date() }
                 }
                 return conv
               }),
             )
+            if (data.mode && data.mode !== "rag") {
+              setIsLoading(false)
+            }
           } else if (data.type === "token") {
             setConversations((prev) =>
               prev.map((conv) => {
@@ -162,13 +167,22 @@ export default function HermesChat() {
                   const newMessages = [...conv.messages]
                   const lastMsg = newMessages[newMessages.length - 1]
                   if (lastMsg && lastMsg.role === "assistant") {
-                    lastMsg.content += data.content
+                    if (data.mode && data.mode !== "rag") {
+                      // Non-streaming chat path: replace content to avoid duplicates
+                      lastMsg.content = data.content
+                    } else {
+                      lastMsg.content += data.content
+                    }
+                    lastMsg.mode = data.mode
                   }
                   return { ...conv, messages: newMessages, updatedAt: new Date() }
                 }
                 return conv
               }),
             )
+            if (data.mode && data.mode !== "rag") {
+              setIsLoading(false)
+            }
           } else if (data.type === "done") {
             setIsLoading(false)
           } else if (data.type === "error") {
@@ -352,15 +366,19 @@ export default function HermesChat() {
             if (conv.id === currentConversationId) {
               const newMessages = [...conv.messages]
               const lastMsg = newMessages[newMessages.length - 1]
-              if (lastMsg && lastMsg.role === "assistant") {
-                lastMsg.content = data.answer || "Συγγνώμη, δεν μπόρεσα να επεξεργαστώ την ερώτηση."
-                lastMsg.sources = data.sources?.map((s: any) => s.source) || []
-              }
-              return { ...conv, messages: newMessages, updatedAt: new Date() }
-            }
-            return conv
-          }),
-        )
+          if (lastMsg && lastMsg.role === "assistant") {
+            lastMsg.content = data.answer || "Συγγνώμη, δεν μπόρεσα να επεξεργαστώ την ερώτηση."
+            lastMsg.sources = data.sources?.map((s: any) => s.source) || []
+            lastMsg.mode = data.mode
+          }
+          return { ...conv, messages: newMessages, updatedAt: new Date() }
+        }
+        return conv
+      }),
+    )
+        if (data.mode && data.mode !== "rag") {
+          setIsLoading(false)
+        }
       } catch (error) {
         setConversations((prev) =>
           prev.map((conv) => {
@@ -418,6 +436,9 @@ export default function HermesChat() {
       window.location.href = "/login"
     }
   }
+
+  const lastMessage = messages[messages.length - 1]
+  const showRetrievalLoader = isLoading && lastMessage?.mode === "rag"
 
   return (
     <div className={cn("flex h-screen w-full flex-col md:flex-row overflow-hidden bg-background")}>
@@ -698,7 +719,7 @@ export default function HermesChat() {
                   </div>
                 ))}
 
-                {isLoading && (
+                {showRetrievalLoader && (
                   <div className="flex gap-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                       <Logo className="h-5 w-5" />
