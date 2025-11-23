@@ -1,0 +1,61 @@
+import { Card } from "@/components/ui/card"
+import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
+import { Logo } from "@/components/logo"
+import { ChatSources } from "./ChatSources"
+import { Message } from "../types"
+
+type Props = {
+  message: Message
+  isLast: boolean
+  isLoading: boolean
+}
+
+export function ChatMessage({ message, isLast, isLoading }: Props) {
+  return (
+    <div className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+      {message.role === "assistant" && (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Logo className="h-5 w-5" />
+        </div>
+      )}
+
+      <div
+        className={`flex max-w-[70%] flex-col gap-2 ${
+          message.role === "user" ? "items-end" : "items-start"
+        }`}
+      >
+        <Card
+          className={`px-4 py-3 ${
+            message.role === "user" ? "bg-primary text-primary-foreground" : "bg-card"
+          }`}
+        >
+          {message.role === "assistant" && message.content && isLoading && isLast ? (
+            <TextGenerateEffect
+              words={message.content}
+              className="font-normal text-sm leading-relaxed"
+              filter={true}
+              duration={0.3}
+            />
+          ) : (
+            <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed">{message.content}</p>
+          )}
+        </Card>
+
+        {message.sources && message.sources.length > 0 && <ChatSources sources={message.sources} />}
+
+        <span className="text-xs text-muted-foreground">
+          {message.timestamp.toLocaleTimeString("el-GR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </div>
+
+      {message.role === "user" && (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+          <div className="text-sm font-semibold">ΧΡ</div>
+        </div>
+      )}
+    </div>
+  )
+}
