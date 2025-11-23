@@ -67,6 +67,35 @@ export default function HermesChat() {
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 3
 
+  const updateAssistantMessage = (cb: (msg: Message) => void) => {
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id !== currentConversationId) return conv
+        const newMessages = [...conv.messages]
+        const lastMsg = newMessages[newMessages.length - 1]
+        if (lastMsg?.role === "assistant") {
+          cb(lastMsg)
+        }
+        return { ...conv, messages: newMessages, updatedAt: new Date() }
+      }),
+    )
+  }
+
+  const addAssistantError = (msg: string) => {
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id !== currentConversationId) return conv
+        return {
+          ...conv,
+          messages: [
+            ...conv.messages,
+            { role: "assistant", content: msg, timestamp: new Date(), mode: "error" },
+          ],
+        }
+      }),
+    )
+  }
+
   const placeholders = [
     "Ποιες είναι οι διαδικασίες για άδεια στρατιωτικού προσωπικού;",
     "Πώς εφαρμόζονται οι κανονισμοί ασφαλείας στις εγκαταστάσεις;",
@@ -143,68 +172,26 @@ export default function HermesChat() {
           const data = JSON.parse(event.data)
 
           if (data.type === "sources") {
-            setConversations((prev) =>
-              prev.map((conv) => {
-                if (conv.id === currentConversationId) {
-                  const newMessages = [...conv.messages]
-                  const lastMsg = newMessages[newMessages.length - 1]
-                  if (lastMsg && lastMsg.role === "assistant") {
-                    lastMsg.sources = data.sources?.map((s: any) => s.source) || []
-                    lastMsg.mode = data.mode
-                  }
-                  return { ...conv, messages: newMessages, updatedAt: new Date() }
-                }
-                return conv
-              }),
-            )
-            if (data.mode && data.mode !== "rag") {
-              setIsLoading(false)
-            }
+            updateAssistantMessage((lastMsg) => {
+              lastMsg.sources = data.sources?.map((s: any) => s.source) || []
+              lastMsg.mode = data.mode
+            })
           } else if (data.type === "token") {
-            setConversations((prev) =>
-              prev.map((conv) => {
-                if (conv.id === currentConversationId) {
-                  const newMessages = [...conv.messages]
-                  const lastMsg = newMessages[newMessages.length - 1]
-                  if (lastMsg && lastMsg.role === "assistant") {
-                    if (data.mode && data.mode !== "rag") {
-                      // Non-streaming chat path: replace content to avoid duplicates
-                      lastMsg.content = data.content
-                    } else {
-                      lastMsg.content += data.content
-                    }
-                    lastMsg.mode = data.mode
-                  }
-                  return { ...conv, messages: newMessages, updatedAt: new Date() }
-                }
-                return conv
-              }),
-            )
-            if (data.mode && data.mode !== "rag") {
+            updateAssistantMessage((lastMsg) => {
+              if (data.mode !== "rag") {
+                lastMsg.content = data.content
+              } else {
+                lastMsg.content += data.content
+              }
+              lastMsg.mode = data.mode
+            })
+            if (data.mode !== "rag") {
               setIsLoading(false)
             }
           } else if (data.type === "done") {
             setIsLoading(false)
           } else if (data.type === "error") {
-            setConversations((prev) =>
-              prev.map((conv) => {
-                if (conv.id === currentConversationId) {
-                  return {
-                    ...conv,
-                    messages: [
-                      ...conv.messages,
-                      {
-                        role: "assistant",
-                        content: `Σφάλμα: ${data.content}`,
-                        timestamp: new Date(),
-                      },
-                    ],
-                    updatedAt: new Date(),
-                  }
-                }
-                return conv
-              }),
-            )
+            addAssistantError(`Σφάλμα: ${data.content}`)
             setIsLoading(false)
           }
         }
@@ -437,8 +424,11 @@ export default function HermesChat() {
     }
   }
 
-  const lastMessage = messages[messages.length - 1]
+  const visibleMessages = messages.filter((m) => !(m.role === "assistant" && m.content === ""))
+  const lastMessage = visibleMessages[visibleMessages.length - 1]
   const showRetrievalLoader = isLoading && lastMessage?.mode === "rag"
+  const showChatLoader =
+    isLoading && !showRetrievalLoader && (lastMessage?.mode === "chat" || lastMessage?.mode === undefined)
 
   return (
     <div className={cn("flex h-screen w-full flex-col md:flex-row overflow-hidden bg-background")}>
@@ -656,7 +646,7 @@ export default function HermesChat() {
           <div className="mx-auto flex w-full max-w-5xl flex-col">
             <ScrollArea className="flex-1 px-6 py-8" ref={scrollRef}>
               <div className="space-y-6">
-                {messages.map((message, index) => (
+                {visibleMessages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -727,6 +717,17 @@ export default function HermesChat() {
                     <Card className="flex items-center gap-2 bg-card px-4 py-3">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">Αναζήτηση σε έγγραφα...</span>
+                    </Card>
+                  </div>
+                )}
+                {!showRetrievalLoader && showChatLoader && (
+                  <div className="flex gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                      <Logo className="h-5 w-5" />
+                    </div>
+                    <Card className="flex items-center gap-2 bg-card px-4 py-3">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Σκέφτομαι την απάντηση...</span>
                     </Card>
                   </div>
                 )}
