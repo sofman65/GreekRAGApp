@@ -156,7 +156,7 @@ export default function HermesChat() {
             <div className="mx-auto max-w-4xl">
               <PlaceholdersAndVanishInput placeholders={placeholders} onChange={(e) => setInput(e.target.value)} onSubmit={(e) => { e.preventDefault(); handleSend(); }} />
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Απόρρητη Επικοινωνία • Εσωτερικό Δίκτυο ΕΔ • Ερμής v1.0 {isConnected ? "• Online" : "• Offline"}
+                Απόρρητη Επικοινωνία • Εσωτερικό Δίκτυο KETAK • Ερμής v1.0 {isConnected ? "• Online" : "• Offline"}
               </p>
             </div>
           </div>

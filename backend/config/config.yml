@@ -1,20 +1,5 @@
 # Configuration for Ερμής RAG System
 
-corpus:
-  input_dir: "backend/data/corpus"
-  file_types:
-    - ".pdf"
-    - ".md"
-
-splitter:
-  chunk_size: 1200
-  chunk_overlap: 120
-
-embeddings:
-  provider: "ollama"
-  model: "nomic-embed-text"
-  batch_size: 16
-
 vector_db:
   backend: "weaviate"
   top_k: 6
@@ -26,20 +11,20 @@ vector_db:
 
 llm:
   provider: "ollama"
-  model: "gpt-oss:20b"
-  temperature: 0.1
+  model: "llama3.2" # gpt-oss:20b is the best model for this use case
+  temperature: 0.0
 
 chat_llm:
   provider: "ollama"
-  model: "llama3.2"
-  temperature: 0.2
+  model: "gemma2:2b"
+  temperature: 0.1
 
 router:
   enabled: true
   min_score: 0.4
   llm:
     provider: "ollama"
-    model: "llama3.2"
+    model: "phi3.5:latest"
     temperature: 0.0
 
 corpus:

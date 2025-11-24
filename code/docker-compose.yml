@@ -9,6 +9,8 @@ services:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
       PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
       ENABLE_MODULES: ""
+      DEFAULT_VECTORIZER_MODULE: "none"
+      CLUSTER_HOSTNAME: "node1"
     ports:
       - "8080:8080"
     volumes:
@@ -16,6 +18,12 @@ services:
     restart: unless-stopped
     networks:
       - hermes-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
 
   backend:
     build:
@@ -31,7 +39,8 @@ services:
       - OLLAMA_HOST=http://host.docker.internal:11434
       - CONFIG_PATH=scripts/config.yml
     depends_on:
-      - weaviate
+      weaviate:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - hermes-network
