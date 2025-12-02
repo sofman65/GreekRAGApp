@@ -11,12 +11,12 @@ vector_db:
 
 llm:
   provider: "ollama"
-  model: "llama3.2" # gpt-oss:20b is the best model for this use case
+  model: "gpt-oss:20b" # gpt-oss:20b is the best model for this use case
   temperature: 0.0
 
 chat_llm:
   provider: "ollama"
-  model: "gemma2:2b"
+  model: "gemma2:9b"
   temperature: 0.1
 
 router:

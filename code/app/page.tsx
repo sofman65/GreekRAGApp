@@ -1,30 +1,29 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input"
+import { TextareaAutosize } from "@/components/ui/textarea-autosize"
 import { ChatSidebar } from "./hermes/components/ChatSidebar"
 import { ChatMessage } from "./hermes/components/ChatMessage"
 import { ChatLoading } from "./hermes/components/ChatLoading"
+import { EmptyState } from "./hermes/components/EmptyState"
+import { SettingsModal } from "./hermes/components/SettingsModal"
 import { useConversations } from "./hermes/hooks/useConversations"
 import { useHermesWS } from "./hermes/hooks/useHermesWS"
 import { Conversation } from "./hermes/types"
 import { cn } from "@/lib/utils"
-
-const placeholders = [
-  "Ποιες είναι οι διαδικασίες για άδεια στρατιωτικού προσωπικού;",
-  "Πώς εφαρμόζονται οι κανονισμοί ασφαλείας στις εγκαταστάσεις;",
-  "Ποια είναι η διαδικασία για την έκδοση στρατιωτικών εγγράφων;",
-  "Πώς διεξάγεται η εκπαίδευση νέων στρατιωτών;",
-  "Ποιοι είναι οι κανόνες χρήσης στρατιωτικού εξοπλισμού;",
-]
+import { Send, Square, ArrowDown } from "lucide-react"
 
 export default function HermesChat() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [input, setInput] = useState("")
   const [backendUrl] = useState(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
+  const [showScrollButton, setShowScrollButton] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const {
     state,
@@ -63,12 +62,30 @@ export default function HermesChat() {
     [currentConversationId, setSources, updateAssistantMessage],
   )
 
-  const { isConnected, isLoading, sendMessage } = useHermesWS(backendUrl, wsHandlers)
+  const { isConnected, isLoading, sendMessage, stopGeneration } = useHermesWS(backendUrl, wsHandlers)
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [])
+
+  useEffect(() => {
+    if (isLoading || messages.length > 0) {
+      scrollToBottom()
+    }
+  }, [messages.length, isLoading, scrollToBottom])
+
+  // Handle scroll to show/hide scroll button
+  const handleScroll = useCallback((e: any) => {
+    const element = e.target
+    const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 100
+    setShowScrollButton(!isNearBottom && messages.length > 0)
+  }, [messages.length])
 
   const handleSend = useCallback(
     async (text?: string) => {
       const messageToSend = text || input
-      if (!messageToSend.trim()) return
+      if (!messageToSend.trim() || isLoading) return
 
       const convId = currentConversationId
       const conversation = state.conversations.find((c) => c.id === convId)
@@ -82,7 +99,24 @@ export default function HermesChat() {
       setInput("")
       await sendMessage(messageToSend)
     },
-    [addAssistantMessage, addUserMessage, currentConversationId, input, sendMessage, state.conversations, updateTitle],
+    [addAssistantMessage, addUserMessage, currentConversationId, input, isLoading, sendMessage, state.conversations, updateTitle],
+  )
+
+  const handleRegenerate = useCallback(() => {
+    const lastUserMessage = messages.filter((m) => m.role === "user").pop()
+    if (lastUserMessage && !isLoading) {
+      handleSend(lastUserMessage.content)
+    }
+  }, [handleSend, isLoading, messages])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        handleSend()
+      }
+    },
+    [handleSend],
   )
 
   const createNewConversation = () => {
@@ -118,6 +152,7 @@ export default function HermesChat() {
   const lastMessage = visibleMessages[visibleMessages.length - 1]
   const showRetrievalLoader = isLoading && lastMessage?.mode === "rag"
   const showChatLoader = isLoading && !showRetrievalLoader
+  const showEmptyState = visibleMessages.length === 0 || (visibleMessages.length === 1 && visibleMessages[0].role === "assistant" && visibleMessages[0].content.includes("Καλώς ήρθατε"))
 
   return (
     <div className={cn("flex h-screen w-full flex-col md:flex-row overflow-hidden bg-background")}>
@@ -132,29 +167,80 @@ export default function HermesChat() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         handleLogout={handleLogout}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="mx-auto flex w-full max-w-5xl flex-col">
-          <ScrollArea className="flex-1 px-6 py-8">
-            <div className="space-y-6">
-              {visibleMessages.map((message, index) => (
-                <ChatMessage
-                  key={index}
-                  message={message}
-                  isLast={index === visibleMessages.length - 1}
-                  isLoading={isLoading}
-                />
-              ))}
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
 
-              {showRetrievalLoader && <ChatLoading variant="rag" />}
-              {!showRetrievalLoader && showChatLoader && <ChatLoading variant="chat" />}
-            </div>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="mx-auto flex w-full max-w-5xl flex-col relative">
+          <ScrollArea className="flex-1 px-6 py-8" onScrollCapture={handleScroll}>
+            {showEmptyState ? (
+              <EmptyState onPromptClick={handleSend} />
+            ) : (
+              <div className="space-y-6">
+                {visibleMessages.map((message, index) => (
+                  <ChatMessage
+                    key={index}
+                    message={message}
+                    isLast={index === visibleMessages.length - 1}
+                    isLoading={isLoading}
+                    onRegenerate={handleRegenerate}
+                  />
+                ))}
+
+                {showRetrievalLoader && <ChatLoading variant="rag" />}
+                {!showRetrievalLoader && showChatLoader && <ChatLoading variant="chat" />}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
           </ScrollArea>
+
+          {showScrollButton && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute bottom-32 right-8 rounded-full shadow-lg z-10"
+              onClick={scrollToBottom}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+          )}
 
           <div className="border-t border-border bg-card/50 p-4 md:p-6 backdrop-blur-sm">
             <div className="mx-auto max-w-4xl">
-              <PlaceholdersAndVanishInput placeholders={placeholders} onChange={(e) => setInput(e.target.value)} onSubmit={(e) => { e.preventDefault(); handleSend(); }} />
+              <div className="relative flex items-end gap-2 rounded-lg border border-border bg-background p-2 shadow-sm">
+                <TextareaAutosize
+                  placeholder="Γράψτε το μήνυμά σας... (Shift+Enter για νέα γραμμή)"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  minRows={1}
+                  maxRows={6}
+                  disabled={isLoading}
+                  className="flex-1 resize-none border-0 bg-transparent px-3 py-2 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                
+                {isLoading ? (
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="shrink-0 h-10 w-10"
+                    onClick={stopGeneration}
+                  >
+                    <Square className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    disabled={!input.trim()}
+                    onClick={() => handleSend()}
+                    className="shrink-0 h-10 w-10 bg-accent hover:bg-accent/90"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <p className="mt-3 text-center text-xs text-muted-foreground">
                 Απόρρητη Επικοινωνία • Εσωτερικό Δίκτυο KETAK • Ερμής v1.0 {isConnected ? "• Online" : "• Offline"}
               </p>

@@ -106,9 +106,17 @@ export function useHermesWS(backendUrl: string, handlers: Handlers) {
     }
   }
 
+  const stopGeneration = () => {
+    setIsLoading(false)
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "stop" }))
+    }
+  }
+
   return {
     isConnected,
     isLoading,
     sendMessage,
+    stopGeneration,
   }
 }

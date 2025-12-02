@@ -2,17 +2,20 @@ import { Card } from "@/components/ui/card"
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
 import { Logo } from "@/components/logo"
 import { ChatSources } from "./ChatSources"
+import { MessageActions } from "./MessageActions"
+import { MarkdownRenderer } from "./MarkdownRenderer"
 import { Message } from "../types"
 
 type Props = {
   message: Message
   isLast: boolean
   isLoading: boolean
+  onRegenerate?: () => void
 }
 
-export function ChatMessage({ message, isLast, isLoading }: Props) {
+export function ChatMessage({ message, isLast, isLoading, onRegenerate }: Props) {
   return (
-    <div className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+    <div className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"} group`}>
       {message.role === "assistant" && (
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Logo className="h-5 w-5" />
@@ -36,6 +39,8 @@ export function ChatMessage({ message, isLast, isLoading }: Props) {
               filter={true}
               duration={0.3}
             />
+          ) : message.role === "assistant" ? (
+            <MarkdownRenderer content={message.content} className="text-sm" />
           ) : (
             <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed">{message.content}</p>
           )}
@@ -43,12 +48,19 @@ export function ChatMessage({ message, isLast, isLoading }: Props) {
 
         {message.sources && message.sources.length > 0 && <ChatSources sources={message.sources} />}
 
-        <span className="text-xs text-muted-foreground">
-          {message.timestamp.toLocaleTimeString("el-GR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {message.timestamp.toLocaleTimeString("el-GR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <MessageActions
+            content={message.content}
+            onRegenerate={message.role === "assistant" && isLast && !isLoading ? onRegenerate : undefined}
+            isAssistant={message.role === "assistant"}
+          />
+        </div>
       </div>
 
       {message.role === "user" && (

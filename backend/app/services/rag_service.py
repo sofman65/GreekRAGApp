@@ -42,7 +42,14 @@ class RAGService:
 
     def ingest_corpus(self) -> None:
         corpus_cfg = self.cfg["corpus"]
-        root = Path(corpus_cfg["input_dir"]).expanduser().resolve()
+        input_dir = Path(corpus_cfg["input_dir"]).expanduser()
+        if not input_dir.is_absolute():
+            # Resolve relative paths against the config file directory to avoid
+            # depending on the current working directory of the caller.
+            cfg_dir = Path(self.cfg_path).expanduser().parent
+            root = (cfg_dir / input_dir).resolve()
+        else:
+            root = input_dir.resolve()
         if not root.exists():
             raise FileNotFoundError(f"Corpus directory not found: {root}")
 
