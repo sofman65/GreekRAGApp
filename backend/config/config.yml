@@ -11,7 +11,7 @@ vector_db:
 
 llm:
   provider: "ollama"
-  model: "gpt-oss:20b" # gpt-oss:20b is the best model for this use case
+  model: "jobautomation/OpenEuroLLM-Greek:latest" # Greek-optimized model
   temperature: 0.0
 
 chat_llm:

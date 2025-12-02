@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card"
-import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
+import { StreamingText } from "@/components/ui/streaming-text"
 import { Logo } from "@/components/logo"
 import { ChatSources } from "./ChatSources"
 import { MessageActions } from "./MessageActions"
@@ -32,12 +32,11 @@ export function ChatMessage({ message, isLast, isLoading, onRegenerate }: Props)
             message.role === "user" ? "bg-primary text-primary-foreground" : "bg-card"
           }`}
         >
-          {message.role === "assistant" && message.content && isLoading && isLast ? (
-            <TextGenerateEffect
-              words={message.content}
-              className="font-normal text-sm leading-relaxed"
-              filter={true}
-              duration={0.3}
+          {message.role === "assistant" && isLoading && isLast ? (
+            <StreamingText
+              content={message.content}
+              className="text-sm leading-relaxed"
+              showCursor={true}
             />
           ) : message.role === "assistant" ? (
             <MarkdownRenderer content={message.content} className="text-sm" />

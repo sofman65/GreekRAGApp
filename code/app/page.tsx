@@ -11,6 +11,7 @@ import { EmptyState } from "./hermes/components/EmptyState"
 import { SettingsModal } from "./hermes/components/SettingsModal"
 import { useConversations } from "./hermes/hooks/useConversations"
 import { useHermesWS } from "./hermes/hooks/useHermesWS"
+import { useHermesSSE } from "./hermes/hooks/useHermesSSE"
 import { Conversation } from "./hermes/types"
 import { cn } from "@/lib/utils"
 import { Send, Square, ArrowDown } from "lucide-react"
@@ -22,6 +23,7 @@ export default function HermesChat() {
   const [backendUrl] = useState(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [useSSE, setUseSSE] = useState(true) // Use SSE by default (ChatGPT-style)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -47,8 +49,13 @@ export default function HermesChat() {
         setSources(currentConversationId, sources, mode)
       },
       onToken: (content: string, mode?: string) => {
+        // For SSE: content is the FULL accumulated answer
+        // For WS: content might be a token to append
         updateAssistantMessage(currentConversationId, (msg) => {
-          if (mode !== "rag") {
+          // SSE sends full content, WS sends incremental tokens
+          // Check if this looks like a full replacement (longer than current + token)
+          const isFullContent = content.length > msg.content.length + 50 || msg.content === ""
+          if (isFullContent || mode === "rag") {
             return { ...msg, content, mode }
           }
           return { ...msg, content: msg.content + content, mode }
@@ -62,7 +69,11 @@ export default function HermesChat() {
     [currentConversationId, setSources, updateAssistantMessage],
   )
 
-  const { isConnected, isLoading, sendMessage, stopGeneration } = useHermesWS(backendUrl, wsHandlers)
+  // Use SSE or WebSocket based on toggle
+  const wsConnection = useHermesWS(backendUrl, wsHandlers)
+  const sseConnection = useHermesSSE(backendUrl, wsHandlers)
+  
+  const { isConnected, isLoading, sendMessage, stopGeneration } = useSSE ? sseConnection : wsConnection
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
