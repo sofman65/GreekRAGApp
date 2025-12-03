@@ -12,8 +12,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
 
 # Password hashing
-# Use pbkdf2_sha256 to avoid bcrypt wheel issues in restricted environments.
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -78,3 +77,4 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         
     except JWTError:
         raise credentials_exception
+

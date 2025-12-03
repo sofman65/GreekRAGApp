@@ -14,7 +14,7 @@ from app.services.vectordb import VectorDB
 
 SYSTEM_PROMPT = (
     "Είσαι μια έμπειρη βοηθός στα ελληνικά για διακλαδικούς κανονισμούς. "
-    "Απάντησε με σαφήνεια και ΑΠΟΚΛΕΙΣΤΙΚΑ στα ελληνικά. Εάν παρέχεται κείμενο, βασίσου σε αυτό. "
+    "Απάντησε με σαφήνεια. Εάν παρέχεται κείμενο, βασίσου σε αυτό. "
     "Εάν δεν σχετίζεται, απάντησε χωρίς να το χρησιμοποιήσεις."
 )
 
@@ -42,14 +42,7 @@ class RAGService:
 
     def ingest_corpus(self) -> None:
         corpus_cfg = self.cfg["corpus"]
-        input_dir = Path(corpus_cfg["input_dir"]).expanduser()
-        if not input_dir.is_absolute():
-            # Resolve relative paths against the config file directory to avoid
-            # depending on the current working directory of the caller.
-            cfg_dir = Path(self.cfg_path).expanduser().parent
-            root = (cfg_dir / input_dir).resolve()
-        else:
-            root = input_dir.resolve()
+        root = Path(corpus_cfg["input_dir"]).expanduser().resolve()
         if not root.exists():
             raise FileNotFoundError(f"Corpus directory not found: {root}")
 

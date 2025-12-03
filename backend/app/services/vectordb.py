@@ -24,24 +24,15 @@ class VectorDB:
 
         if self.backend == "weaviate":
             url = cfg["weaviate"].get("url")
-            grpc_port = cfg["weaviate"].get("grpc_port", 50051)
             if url:
                 from urllib.parse import urlparse
 
                 parsed = urlparse(url)
                 host = parsed.hostname or "localhost"
                 port = parsed.port or 8080
-                self.client = weaviate.connect_to_local(
-                    host=host,
-                    port=port,
-                    grpc_port=grpc_port,
-                    skip_init_checks=True,
-                )
+                self.client = weaviate.connect_to_local(host=host, port=port)
             else:
-                self.client = weaviate.connect_to_local(
-                    grpc_port=grpc_port,
-                    skip_init_checks=True,
-                )
+                self.client = weaviate.connect_to_local()
             self.class_name = cfg["weaviate"]["class_name"]
             self.text_key = cfg["weaviate"].get("text_key", "text")
             self._ensure_class()
@@ -84,30 +75,23 @@ class VectorDB:
         k: int,
     ) -> List[Tuple[str, float, Dict]]:
         if self.backend == "weaviate":
-            from weaviate.classes.query import MetadataQuery
-
             coll = self.client.collections.get(self.class_name)
             qvec = self.emb_factory.embed_query(query)
-            result = coll.query.near_vector(
-                near_vector=qvec,
-                limit=k,
-                return_metadata=MetadataQuery(distance=True, certainty=True),
-            )
+            result = coll.query.near_vector(near_vector=qvec, limit=k)
             hits = []
             for obj in result.objects:
                 text = obj.properties.get(self.text_key, "")
                 md = getattr(obj, "metadata", None)
                 score = 0.0
                 if md is not None:
-                    # Weaviate returns distance (lower is better)
-                    # Convert to similarity score (1 - distance) for consistency
-                    distance = getattr(md, "distance", None)
-                    certainty = getattr(md, "certainty", None)
-                    if certainty is not None:
-                        score = certainty  # Certainty is already 0-1
-                    elif distance is not None:
-                        score = max(0.0, 1.0 - distance)  # Convert distance to similarity
+                    score = (
+                        getattr(md, "distance", None)
+                        or getattr(md, "score", None)
+                        or getattr(md, "certainty", None)
+                        or 0.0
+                    )
                 hits.append((text, float(score), obj.properties))
             return hits
 
         return []
+

@@ -1,34 +1,7 @@
 # Configuration for Ερμής RAG System
 
-vector_db:
-  backend: "weaviate"
-  top_k: 6
-  hybrid: false
-  weaviate:
-    url: "http://localhost:8080"
-    class_name: "GreekMilitaryDoc"
-    text_key: "text"
-
-llm:
-  provider: "ollama"
-  model: "jobautomation/OpenEuroLLM-Greek:latest" # Greek-optimized model
-  temperature: 0.0
-
-chat_llm:
-  provider: "ollama"
-  model: "gemma2:9b"
-  temperature: 0.1
-
-router:
-  enabled: true
-  min_score: 0.4
-  llm:
-    provider: "ollama"
-    model: "phi3.5:latest"
-    temperature: 0.0
-
 corpus:
-  input_dir: "data/corpus"
+  input_dir: "backend/data/corpus"
   file_types:
     - ".pdf"
     - ".md"
@@ -39,10 +12,31 @@ splitter:
 
 embeddings:
   provider: "ollama"
-  model: "jeffh/intfloat-multilingual-e5-large-instruct:f16"
+  model: "nomic-embed-text"
   batch_size: 16
 
-reranker:
+vector_db:
+  backend: "weaviate"
+  top_k: 6
+  weaviate:
+    url: "http://localhost:8080"
+    class_name: "GreekMilitaryDocs"
+    text_key: "text"
+
+llm:
+  provider: "ollama"
+  model: "llama3.2"
+  temperature: 0.1
+
+chat_llm:
+  provider: "ollama"
+  model: "mistral"
+  temperature: 0.2
+
+router:
   enabled: true
-  model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
-  top_k: 5
+  min_score: 0.4
+  llm:
+    provider: "ollama"
+    model: "llama3.2"
+    temperature: 0.0
