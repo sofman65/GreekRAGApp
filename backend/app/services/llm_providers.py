@@ -6,13 +6,27 @@ from langchain_ollama import ChatOllama
 class LLMFactory:
     """Simple factory to standardise access to chat models."""
 
-    def __init__(self, provider: str, model: str, temperature: float = 0.1):
+    def __init__(
+        self,
+        provider: str,
+        model: str,
+        temperature: float = 0.1,
+        max_tokens: int | None = None,
+        **_: object,
+    ):
         self.provider = provider
         self.model = model
         self.temperature = temperature
+        self.max_tokens = max_tokens
+        model_kwargs = {}
+        if max_tokens is not None:
+            model_kwargs["num_predict"] = max_tokens
 
         if provider == "ollama":
-            self._llm = ChatOllama(model=model, temperature=temperature)
+            kwargs = {"model": model, "temperature": temperature}
+            if model_kwargs:
+                kwargs["model_kwargs"] = model_kwargs
+            self._llm = ChatOllama(**kwargs)
         elif provider == "gptoss":
             raise NotImplementedError(
                 "GPT-OSS provider not yet implemented. Plug your client here."
@@ -36,4 +50,3 @@ class LLMFactory:
         for chunk in self._llm.stream(messages):
             if hasattr(chunk, 'content'):
                 yield chunk.content
-
