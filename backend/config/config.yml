@@ -1,5 +1,5 @@
 # ================================
-# Configuration for Ερμής RAG System
+# Configuration for ΠΥΘΙΑ RAG System
 # ================================
 
 corpus:
@@ -21,7 +21,7 @@ splitter:
 
 embeddings:
   provider: "ollama"
-  model: "all-minilm:l6-v2"   # multilingual, stable and fast
+  model: "all-minilm:l6-v2"
   batch_size: 16
 
 vector_db:
@@ -32,51 +32,54 @@ vector_db:
     class_name: "GreekMilitaryDocs"
     text_key: "text"
 
-# -------------------------------------------------------------------
-# RERANKER (recommended to enable later after stability confirmation)
-# -------------------------------------------------------------------
+# -----------------------------------------------------
+# RERANKER — NOW GPU-OPTIMIZED (TURN IT ON WHEN READY)
+# -----------------------------------------------------
 reranker:
-  enabled: true   # set to true later once RAG pipeline is stable
+  enabled: true   # set to true once everything is stable
   provider: "sentence-transformers"
   model: "jinaai/jina-reranker-v2-base-multilingual"
   top_k: 3
-  device: "cuda"        # switch to "cuda" if you want GPU-based reranking
+  device: "cuda"          # <-- correct spelling, GPU acceleration
   trust_remote_code: true
 
-# -------------------------------------------------------------------
-# MAIN LLM for RAG answers
-# -------------------------------------------------------------------
+# -----------------------------------------------------
+# MAIN LLM (RAG MODE)
+# Best models you have:
+# - gpt-oss:20b for accuracy
+# - llama3.1:8b-instruct-q4_K_M if you want speed
+# -----------------------------------------------------
 llm:
   provider: "ollama"
-  model: "gpt-oss:20b"    # stable, available, lightweight
-  temperature: 0.05
-  max_tokens: 2048
+  model: "gpt-oss:20b"          # strongest model you have
+  temperature: 0.00
+  max_tokens: 512
   system_prompt: |
-    Είσαι ο Ερμής, ένας αυστηρός και απόλυτα ακριβής στρατιωτικός RAG βοηθός.
-    - Αν η απάντηση ΔΕΝ βρίσκεται στα παρεχόμενα αποσπάσματα: 
+    Είσαι η Πυθία, ένας αυστηρός και απόλυτα ακριβής στρατιωτικός RAG βοηθός.
+    - Αν η απάντηση ΔΕΝ βρίσκεται στα παρεχόμενα αποσπάσματα:
       "Δεν εντοπίζεται σχετική πληροφορία στα έγγραφα του Ερμή."
     - Δεν επιτρέπεται να εικάζεις ή να προσθέτεις εξωτερική γνώση.
-    - Απάντησε μόνο στα ελληνικά και μόνο βάσει των εγγράφων.
+    - Απάντησε αποκλειστικά στα ελληνικά και μόνο βάσει των εγγράφων.
 
-# -------------------------------------------------------------------
-# CHAT LLM (non-RAG casual replies)
-# -------------------------------------------------------------------
+# -----------------------------------------------------
+# CHAT LLM (NON-RAG MODE)
+# -----------------------------------------------------
 chat_llm:
   provider: "ollama"
   model: "mistral-nemo"
   temperature: 0.2
 
-# -------------------------------------------------------------------
-# ROUTER: controls whether a query uses RAG, CHAT, or is blocked
-# -------------------------------------------------------------------
+# -----------------------------------------------------
+# ROUTER — decides RAG vs CHAT vs BLOCK
+# -----------------------------------------------------
 router:
   enabled: true
   min_score: 0.45
 
   llm:
     provider: "ollama"
-    model: "gemma2:9b"
-    temperature: 0.0    # STRICT classification — no creativity allowed
+    model: "mistral-nemo"
+    temperature: 0.0
 
   rules:
     - pattern: "τι είναι*"
