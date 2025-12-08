@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
 import numpy as np
 import weaviate
 from weaviate.classes.config import DataType, Property
+from weaviate.classes.query import MetadataQuery
 
 try:
     from weaviate.classes.config import Configure
@@ -23,7 +25,8 @@ class VectorDB:
         self.backend = cfg["backend"]
 
         if self.backend == "weaviate":
-            url = cfg["weaviate"].get("url")
+            # Prefer env var (for Docker) over config file
+            url = os.getenv("WEAVIATE_URL") or cfg["weaviate"].get("url")
             if url:
                 from urllib.parse import urlparse
 
@@ -77,21 +80,29 @@ class VectorDB:
         if self.backend == "weaviate":
             coll = self.client.collections.get(self.class_name)
             qvec = self.emb_factory.embed_query(query)
-            result = coll.query.near_vector(near_vector=qvec, limit=k)
+            result = coll.query.near_vector(
+                near_vector=qvec,
+                limit=k,
+                return_metadata=MetadataQuery(distance=True, score=True, certainty=True),
+            )
             hits = []
             for obj in result.objects:
                 text = obj.properties.get(self.text_key, "")
                 md = getattr(obj, "metadata", None)
                 score = 0.0
                 if md is not None:
-                    score = (
-                        getattr(md, "distance", None)
-                        or getattr(md, "score", None)
-                        or getattr(md, "certainty", None)
-                        or 0.0
-                    )
+                    distance = getattr(md, "distance", None)
+                    raw_score = getattr(md, "score", None)
+                    certainty = getattr(md, "certainty", None)
+
+                    if distance is not None:
+                        # Convert cosine distance (lower is better) to similarity
+                        score = max(0.0, 1.0 - float(distance))
+                    elif raw_score is not None:
+                        score = float(raw_score)
+                    elif certainty is not None:
+                        score = float(certainty)
                 hits.append((text, float(score), obj.properties))
             return hits
 
         return []
-

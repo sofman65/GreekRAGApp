@@ -35,3 +35,4 @@ export type ChatAction =
   | { type: "NEW_CONVERSATION"; conversation: Conversation }
   | { type: "DELETE_CONVERSATION"; conversationId: string }
   | { type: "SET_CURRENT"; conversationId: string }
+

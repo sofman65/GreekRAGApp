@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { Button } from "@/components/ui/button"
@@ -58,10 +59,13 @@ function CodeBlock({ inline, className, children, ...props }: any) {
 }
 
 export function MarkdownRenderer({ content, className }: Props) {
+  // Heuristic formatting for LLM outputs that forget to add blank lines before lists.
+  const normalizedContent = content.replace(/([^\n])(\d+\.\s)/g, "$1\n$2").replace(/(:)(\s*)(\d+\.\s)/g, "$1\n$3")
+
   return (
     <div className={className}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           code: CodeBlock,
           p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>,
@@ -88,9 +92,8 @@ export function MarkdownRenderer({ content, className }: Props) {
           td: ({ children }) => <td className="px-4 py-2 border-t border-border">{children}</td>,
         }}
       >
-        {content}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   )
 }
-

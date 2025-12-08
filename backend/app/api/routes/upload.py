@@ -2,10 +2,12 @@
 Document upload routes
 """
 
-from fastapi import APIRouter, UploadFile, File, Request, HTTPException
-from fastapi.responses import JSONResponse
+import os
 from pathlib import Path
 import logging
+
+from fastapi import APIRouter, UploadFile, File, Request, HTTPException
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,7 +27,9 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
     
     try:
         # Save uploaded file to corpus directory
-        corpus_dir = Path("backend/data/corpus")
+        # Use env var for Docker, fallback to local path
+        corpus_path = os.getenv("CORPUS_DIR", "corpus")
+        corpus_dir = Path(corpus_path)
         corpus_dir.mkdir(parents=True, exist_ok=True)
         
         file_path = corpus_dir / file.filename

@@ -1,18 +1,27 @@
+# ================================
 # Configuration for Ερμής RAG System
+# ================================
 
 corpus:
-  input_dir: "backend/data/corpus"
+  input_dir: "corpus"
   file_types:
     - ".pdf"
     - ".md"
 
 splitter:
-  chunk_size: 1200
-  chunk_overlap: 120
+  chunk_size: 1600
+  chunk_overlap: 250
+  separators:
+    - "\n## "
+    - "\n# "
+    - "\nΆρθρο"
+    - "\nΚεφάλαιο"
+    - "\n"
+    - " "
 
 embeddings:
   provider: "ollama"
-  model: "nomic-embed-text"
+  model: "all-minilm:l6-v2"   # multilingual, stable and fast
   batch_size: 16
 
 vector_db:
@@ -23,20 +32,66 @@ vector_db:
     class_name: "GreekMilitaryDocs"
     text_key: "text"
 
+# -------------------------------------------------------------------
+# RERANKER (recommended to enable later after stability confirmation)
+# -------------------------------------------------------------------
+reranker:
+  enabled: true   # set to true later once RAG pipeline is stable
+  provider: "sentence-transformers"
+  model: "jinaai/jina-reranker-v2-base-multilingual"
+  top_k: 3
+  device: "cuda"        # switch to "cuda" if you want GPU-based reranking
+  trust_remote_code: true
+
+# -------------------------------------------------------------------
+# MAIN LLM for RAG answers
+# -------------------------------------------------------------------
 llm:
   provider: "ollama"
-  model: "llama3.2"
-  temperature: 0.1
+  model: "gpt-oss:20b"    # stable, available, lightweight
+  temperature: 0.05
+  max_tokens: 2048
+  system_prompt: |
+    Είσαι ο Ερμής, ένας αυστηρός και απόλυτα ακριβής στρατιωτικός RAG βοηθός.
+    - Αν η απάντηση ΔΕΝ βρίσκεται στα παρεχόμενα αποσπάσματα: 
+      "Δεν εντοπίζεται σχετική πληροφορία στα έγγραφα του Ερμή."
+    - Δεν επιτρέπεται να εικάζεις ή να προσθέτεις εξωτερική γνώση.
+    - Απάντησε μόνο στα ελληνικά και μόνο βάσει των εγγράφων.
 
+# -------------------------------------------------------------------
+# CHAT LLM (non-RAG casual replies)
+# -------------------------------------------------------------------
 chat_llm:
   provider: "ollama"
-  model: "mistral"
+  model: "mistral-nemo"
   temperature: 0.2
 
+# -------------------------------------------------------------------
+# ROUTER: controls whether a query uses RAG, CHAT, or is blocked
+# -------------------------------------------------------------------
 router:
   enabled: true
-  min_score: 0.4
+  min_score: 0.45
+
   llm:
     provider: "ollama"
-    model: "llama3.2"
-    temperature: 0.0
+    model: "gemma2:9b"
+    temperature: 0.0    # STRICT classification — no creativity allowed
+
+  rules:
+    - pattern: "τι είναι*"
+      route: "rag"
+    - pattern: "*κανονισμ*"
+      route: "rag"
+    - pattern: "*άρθρο*"
+      route: "rag"
+    - pattern: "*προεδρικό διάταγμα*"
+      route: "rag"
+    - pattern: "*διαδικασία*"
+      route: "rag"
+    - pattern: "*πώς να*"
+      route: "chat"
+    - pattern: "*συμβουλή*"
+      route: "chat"
+    - pattern: "γεια*"
+      route: "chat"

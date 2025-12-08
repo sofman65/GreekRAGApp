@@ -2,8 +2,9 @@
 Query routes for RAG system interactions
 """
 
+import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import logging
 
 from app.models.query import QueryRequest, QueryResponse, SourceInfo
@@ -60,6 +61,58 @@ async def query(request: QueryRequest, req: Request):
         raise HTTPException(
             status_code=500,
             detail=f"Query failed: {str(e)}"
+        )
+
+
+@router.post("/stream")
+async def stream_query(request: QueryRequest, req: Request):
+    """SSE streaming endpoint for RAG system"""
+    
+    orchestrator = getattr(req.app.state, "query_orchestrator", None)
+    
+    if not request.question:
+        return JSONResponse({"error": "No question provided"}, status_code=400)
+    
+    if not orchestrator:
+        return JSONResponse(
+            {"error": "RAG system not available"},
+            status_code=503
+        )
+    
+    async def generate():
+        try:
+            plan = orchestrator.plan_question(request.question)
+            
+            # Send sources
+            sources = []
+            for text, score, meta in zip(plan.ctx_texts, plan.scores, plan.metas):
+                sources.append({
+                    "text": text[:200] + "..." if len(text) > 200 else text,
+                    "score": score,
+                    "source": meta.get("source", "Άγνωστη πηγή")
+                })
+            
+            yield f"event: sources\ndata: {json.dumps(sources)}\n\n"
+            
+            # Stream tokens (works for both RAG and chat now)
+            for token in orchestrator.stream_plan(plan):
+                yield f"data: {token}\n\n"
+            
+            # Send done event
+            yield f"event: done\ndata: {json.dumps({'mode': plan.mode, 'label': plan.label})}\n\n"
+            
+        except Exception as e:
+            logger.error(f"Stream error: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
         )
 
 
