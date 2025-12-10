@@ -93,7 +93,7 @@ Ensure you have the following installed:
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
-cd ErmisApp
+cd pithiaApp
 
 # 2. Install Ollama models (one-time setup)
 ollama pull llama3.2
@@ -162,7 +162,7 @@ npm run dev
 ### Project Structure
 
 ```
-ErmisApp/
+pithiaApp/
 ├── backend/                    # FastAPI Backend
 │   ├── app/
 │   │   ├── api/               # API routes

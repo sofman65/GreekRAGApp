@@ -34,8 +34,8 @@ Before deploying to production, ensure:
 
 ```bash
 # Create production directory
-mkdir -p /opt/ermis
-cd /opt/ermis
+mkdir -p /opt/pithia
+cd /opt/pithia
 
 # Clone repository
 git clone <your-repo> .
@@ -58,7 +58,7 @@ OLLAMA_BASE_URL=http://host.docker.internal:11434
 OLLAMA_HOST=http://host.docker.internal:11434
 
 # Database (when implemented)
-DATABASE_URL=postgresql://user:password@postgres:5432/ermis
+DATABASE_URL=postgresql://user:password@postgres:5432/pithia
 ```
 
 **Frontend Environment** (`code/.env.production`):
@@ -86,16 +86,16 @@ docker-compose logs -f
 
 #### 3. Configure Reverse Proxy (Nginx)
 
-Create `/etc/nginx/sites-available/ermis`:
+Create `/etc/nginx/sites-available/pithia`:
 
 ```nginx
 # Backend API
-upstream ermis_backend {
+upstream pithia_backend {
     server localhost:8000;
 }
 
 # Frontend
-upstream ermis_frontend {
+upstream pithia_frontend {
     server localhost:3000;
 }
 
@@ -104,8 +104,8 @@ server {
     listen 443 ssl http2;
     server_name api.yourdomain.mil.gr;
 
-    ssl_certificate /etc/ssl/certs/ermis.crt;
-    ssl_certificate_key /etc/ssl/private/ermis.key;
+    ssl_certificate /etc/ssl/certs/pithia.crt;
+    ssl_certificate_key /etc/ssl/private/pithia.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -120,7 +120,7 @@ server {
     limit_req zone=api burst=20 nodelay;
 
     location / {
-        proxy_pass http://ermis_backend;
+        proxy_pass http://pithia_backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -141,10 +141,10 @@ server {
 # Frontend Server
 server {
     listen 443 ssl http2;
-    server_name ermis.yourdomain.mil.gr;
+    server_name pithia.yourdomain.mil.gr;
 
-    ssl_certificate /etc/ssl/certs/ermis.crt;
-    ssl_certificate_key /etc/ssl/private/ermis.key;
+    ssl_certificate /etc/ssl/certs/pithia.crt;
+    ssl_certificate_key /etc/ssl/private/pithia.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -154,7 +154,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
 
     location / {
-        proxy_pass http://ermis_frontend;
+        proxy_pass http://pithia_frontend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -165,14 +165,14 @@ server {
 # Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name api.yourdomain.mil.gr ermis.yourdomain.mil.gr;
+    server_name api.yourdomain.mil.gr pithia.yourdomain.mil.gr;
     return 301 https://$server_name$request_uri;
 }
 ```
 
 Enable site:
 ```bash
-ln -s /etc/nginx/sites-available/ermis /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/pithia /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
 ```
@@ -196,7 +196,7 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'ermis-backend'
+  - job_name: 'pithia-backend'
     static_configs:
       - targets: ['backend:8000']
   
@@ -228,7 +228,7 @@ curl -f http://localhost:8080/v1/.well-known/ready || exit 1
 
 Add to cron:
 ```bash
-*/5 * * * * /opt/ermis/health-check.sh || /opt/ermis/alert.sh
+*/5 * * * * /opt/pithia/health-check.sh || /opt/pithia/alert.sh
 ```
 
 ## 💾 Backup Strategy
@@ -242,7 +242,7 @@ BACKUP_DIR="/backup/weaviate/$(date +%Y%m%d)"
 mkdir -p $BACKUP_DIR
 
 # Backup Weaviate data
-docker exec ermis-weaviate \
+docker exec pithia-weaviate \
   weaviate-cli backup create \
   --backend filesystem \
   --path $BACKUP_DIR
@@ -259,17 +259,17 @@ find /backup/weaviate -name "*.tar.gz" -mtime +30 -delete
 
 ```bash
 # Backup corpus documents
-rsync -av /opt/ermis/backend/data/corpus/ /backup/corpus/
+rsync -av /opt/pithia/backend/data/corpus/ /backup/corpus/
 ```
 
 ### 3. Configuration Backup
 
 ```bash
 # Backup configurations
-tar -czf /backup/config/ermis-config-$(date +%Y%m%d).tar.gz \
-  /opt/ermis/backend/config/ \
-  /opt/ermis/backend/.env \
-  /opt/ermis/code/.env.production
+tar -czf /backup/config/pithia-config-$(date +%Y%m%d).tar.gz \
+  /opt/pithia/backend/config/ \
+  /opt/pithia/backend/.env \
+  /opt/pithia/code/.env.production
 ```
 
 ## 🔄 Updates and Maintenance
@@ -281,7 +281,7 @@ tar -czf /backup/config/ermis-config-$(date +%Y%m%d).tar.gz \
 ./backup.sh
 
 # 2. Pull latest changes
-cd /opt/ermis
+cd /opt/pithia
 git fetch origin
 git checkout <version-tag>
 
@@ -343,7 +343,7 @@ services:
 
 ```bash
 # Check network connectivity
-docker network inspect ermis-network
+docker network inspect pithia-network
 
 # Check service health
 docker-compose ps
@@ -371,7 +371,7 @@ from fastapi_cache.backends.redis import RedisBackend
 @app.on_event("startup")
 async def startup():
     redis = aioredis.from_url("redis://localhost")
-    FastAPICache.init(RedisBackend(redis), prefix="ermis-cache:")
+    FastAPICache.init(RedisBackend(redis), prefix="pithia-cache:")
 ```
 
 ### Weaviate Optimization
@@ -443,15 +443,15 @@ Use Docker secrets or external secrets manager:
 
 ```bash
 # Create secrets
-echo "your-secret-key" | docker secret create ermis_secret_key -
+echo "your-secret-key" | docker secret create pithia_secret_key -
 
 # Use in docker-compose.yml
 services:
   backend:
     secrets:
-      - ermis_secret_key
+      - pithia_secret_key
     environment:
-      SECRET_KEY_FILE: /run/secrets/ermis_secret_key
+      SECRET_KEY_FILE: /run/secrets/pithia_secret_key
 ```
 
 ## 📞 Support Contacts

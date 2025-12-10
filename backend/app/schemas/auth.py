@@ -26,3 +26,7 @@ class ApexLoginSchema(BaseModel):
     apex_user_id: str
     email: EmailStr
     full_name: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str

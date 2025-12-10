@@ -24,7 +24,7 @@ Get Ερμής running in 5 minutes!
 
 ```bash
 git clone <your-repository-url>
-cd ErmisApp
+cd pithiaApp
 ```
 
 ### Step 2: Start Services
