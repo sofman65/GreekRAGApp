@@ -1,4 +1,4 @@
-# Ερμής (Hermes) - Greek Army RAG System
+# Πυθία (Pithia) - Greek Army RAG System
 
 <div align="center">
 
