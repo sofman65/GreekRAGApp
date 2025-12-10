@@ -27,35 +27,39 @@
 - 🧠 **LLM Reasoning** (Ollama / Llama 3.2)  
 - 🔐 **Hybrid Authentication** (APEX + Local Password)  
 - ⚡ **FastAPI + Next.js** για υψηλή απόδοση  
-- 📚 **PDF & Markdown ingestion** με embeddings  
+- 📚 **PDF & Markdown ingestion** με embeddings
+
+- Creating Mermaid diagrams
+Mermaid is a Markdown-inspired tool that renders text into diagrams. For example, Mermaid can render flow charts, sequence diagrams, pie charts and more. For more information, see the Mermaid documentation.
+
+To create a Mermaid diagram, add Mermaid syntax inside a fenced code block with the mermaid language identifier. For more information about creating code blocks, see Creating and highlighting code blocks.
+
+For example, you can create a flow chart by specifying values and arrows.
+
+Here is a simple flow chart:
+
+
 
 ```mermaid
-%%{init: {'theme':'dark'}}%%
 flowchart TB
 
     APEX[APEX (Oracle)\napex_user_id / profile]
-
     FRONTEND[Next.js 16\nAuth UI / Chat UI\nSSE / WebSocket]
 
     API[FastAPI Backend\nHybrid Auth + Sessions\nRAG Orchestrator]
 
     PSQL[(PostgreSQL)\nUsers / Sessions\nConversations / Messages]
-
     WEAV[(Weaviate Vector DB)\nEmbeddings / Semantic Search]
-
     LLM[(LLM Provider\nOllama / Llama3)]
 
     APEX --> API
-
     FRONTEND <--> API
 
     API --> PSQL
-
     API --> WEAV
-
     WEAV --> LLM
-
     API --> LLM
+
 ```
 
 # 🧬 Core Features
