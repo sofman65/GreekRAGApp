@@ -30,3 +30,9 @@ class ApexLoginSchema(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+# Backwards compatibility alias for routes using `User`
+class User(UserOut):
+    """Alias of UserOut used in route response models."""
+    pass

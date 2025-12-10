@@ -7,39 +7,102 @@ from sqlalchemy import select
 
 from app.models.user import User
 from app.models.session import Session
-from app.core.security import create_access_token, create_refresh_token, verify_password, hash_password
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    verify_password,
+    get_password_hash,
+)
 
 
 class AuthService:
 
+    # -------------------------------------------------------
+    # GETTERS
+    # -------------------------------------------------------
     @staticmethod
     async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-        result = await db.execute(select(User).where(User.email == email))
+        result = await db.execute(
+            select(User).where(User.email == email.lower())
+        )
         return result.scalars().first()
 
     @staticmethod
     async def get_user_by_apex_id(db: AsyncSession, apex_user_id: str) -> Optional[User]:
-        result = await db.execute(select(User).where(User.apex_user_id == apex_user_id))
+        result = await db.execute(
+            select(User).where(User.apex_user_id == apex_user_id)
+        )
         return result.scalars().first()
 
-    # -----------------------------
-    # LOCAL LOGIN
-    # -----------------------------
+    # -------------------------------------------------------
+    # CREATE LOCAL USER (email + password)
+    # -------------------------------------------------------
     @staticmethod
-    async def authenticate_local(db: AsyncSession, email: str, password: str):
-        user = await AuthService.get_user_by_email(db, email)
-        if not user or not verify_password(password, user.password_hash):
-            return None
+    async def create_local_user(
+        db: AsyncSession,
+        email: str,
+        password: str,
+        full_name: Optional[str] = None,
+    ) -> User:
+
+        email = email.lower()
+
+        # Check if user already exists
+        existing = await AuthService.get_user_by_email(db, email)
+        if existing:
+            raise ValueError("Το email χρησιμοποιείται ήδη")
+
+        user = User(
+            id=uuid4(),
+            email=email,
+            password_hash=get_password_hash(password),
+            full_name=full_name or email,
+            role="user",
+        )
+
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
         return user
 
-    # -----------------------------
-    # APEX LOGIN (NO PASSWORD)
-    # -----------------------------
+    # -------------------------------------------------------
+    # LOCAL AUTH (email + password)
+    # -------------------------------------------------------
     @staticmethod
-    async def authenticate_apex(db: AsyncSession, *, apex_user_id: str, email: str, full_name: str):
+    async def authenticate_local(db: AsyncSession, email: str, password: str) -> Optional[User]:
+        email = email.lower()
+        user = await AuthService.get_user_by_email(db, email)
+
+        if not user:
+            return None
+
+        # APEX users cannot log in locally
+        if user.password_hash is None:
+            return None
+
+        if not verify_password(password, user.password_hash):
+            return None
+
+        return user
+
+    # -------------------------------------------------------
+    # APEX AUTH (NO PASSWORD)
+    # ALWAYS CREATES/UPDATES LOCAL BACKUP USER
+    # -------------------------------------------------------
+    @staticmethod
+    async def authenticate_apex(
+        db: AsyncSession,
+        *,
+        apex_user_id: str,
+        email: str,
+        full_name: str,
+    ) -> User:
+
+        email = email.lower()
 
         user = await AuthService.get_user_by_apex_id(db, apex_user_id)
 
+        # 1️⃣ User does NOT exist → create
         if not user:
             user = User(
                 id=uuid4(),
@@ -47,24 +110,41 @@ class AuthService:
                 email=email,
                 full_name=full_name,
                 role="user",
+                password_hash=None,  # important → APEX users never store passwords
             )
             db.add(user)
             await db.commit()
+            await db.refresh(user)
+            return user
 
-        else:
-            # Update profile from APEX if changed
+        # 2️⃣ User exists → update local backup
+        updated = False
+
+        if user.email != email:
             user.email = email
+            updated = True
+
+        if user.full_name != full_name:
             user.full_name = full_name
+            updated = True
+
+        if updated:
             await db.commit()
+            await db.refresh(user)
 
         return user
 
-    # -----------------------------
-    # SESSION CREATION
-    # -----------------------------
+    # -------------------------------------------------------
+    # SESSION + TOKENS
+    # -------------------------------------------------------
     @staticmethod
-    async def create_session(db: AsyncSession, user: User, user_agent: str = None, ip: str = None):
-        refresh_token = create_refresh_token(user.id)
+    async def create_session(
+        db: AsyncSession,
+        user: User,
+        user_agent: str = None,
+        ip: str = None,
+    ):
+        refresh_token = create_refresh_token(str(user.id))
 
         session = Session(
             id=uuid4(),
