@@ -30,34 +30,28 @@
 - ⚡ **FastAPI + Next.js** για υψηλή απόδοση  
 - 📚 **PDF & Markdown ingestion** με embeddings  
 
+%%{init: {'theme':'dark'}}%%
 ---
+flowchart TB
 
-# 🏛️ Architecture
+    APEX[APEX (Oracle)\napex_user_id / profile]
+    FRONTEND[Next.js 16\nAuth UI / Chat UI\nSSE / WebSocket]
 
-                      ┌──────────────────────────┐
-                      │     APEX (Oracle)        │
-                      │  apex_user_id / profile  │
-                      └───────────┬──────────────┘
-                                  │
-                                  ▼
-                    ┌──────────────────────────┐
-                    │   FastAPI Backend        │
-                    │ Hybrid Auth + Sessions   │
-                    └───┬──────────┬───────────┘
-                        │          │
-                        │          │
-    ┌───────────────────┘          └───────────────────┐
-    ▼                                                  ▼
-┌────────────────────┐ ┌────────────────────┐
-│ PostgreSQL (SQL) │ │ Weaviate Vector DB │
-│ users/sessions/chat│──RAG Pipeline──────────▶│ embeddings+RAG │
-└────────────────────┘ └────────────────────┘
-│
-▼
-┌──────────────────┐
-│ LLM Provider │
-│ (Ollama/Llama3) 
-└──────────────────┘
+    API[FastAPI Backend\nHybrid Auth + Sessions\nRAG Orchestrator]
+
+    PSQL[(PostgreSQL)\nUsers / Sessions\nConversations / Messages]
+    WEAV[(Weaviate Vector DB)\nEmbeddings / Semantic Search]
+    LLM[(LLM Provider\nOllama / Llama3)]
+
+    APEX --> API
+    FRONTEND <--> API
+
+    API --> PSQL
+    API --> WEAV
+    WEAV --> LLM
+    API --> LLM
+
+
 
 
 ---
