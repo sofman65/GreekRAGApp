@@ -21,6 +21,9 @@ from app.db.session import get_db
 from app.schemas.auth import Token, UserCreate, User
 from app.models.user import User as UserModel
 from app.models.session import Session as SessionModel
+from app.schemas.auth import ApexLoginSchema
+from app.services.auth import AuthService
+from fastapi import Request
 
 router = APIRouter()
 
@@ -68,35 +71,60 @@ async def signup(payload: UserCreate, db: AsyncSession = Depends(get_db)):
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
+    request: Request = None,
 ):
-    """Authenticate user (email via username field) and return tokens."""
-    user = await _get_user_by_email(db, form_data.username)
-    if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Λανθασμένα στοιχεία σύνδεσης",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    user = await AuthService.authenticate_local(db, form_data.username, form_data.password)
 
-    access_token_expires = timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(user.id)},
-        expires_delta=access_token_expires,
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="Λανθασμένα στοιχεία σύνδεσης")
+
+    session_data = await AuthService.create_session(
+        db,
+        user,
+        user_agent=request.headers.get("User-Agent"),
+        ip=request.client.host,
     )
 
-    refresh_expires = datetime.utcnow() + timedelta(days=30)
-    refresh_token = await _create_session(db, user.id, refresh_expires)
+    return session_data
+
+
+@router.post("/apex-login", response_model=Token)
+async def apex_login(
+    payload: ApexLoginSchema,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Login from APEX (no password).
+    If user doesn't exist → create.
+    If user exists → update profile.
+    Then create session + return tokens.
+    """
+
+    user = await AuthService.authenticate_apex(
+        db,
+        apex_user_id=payload.apex_user_id,
+        email=payload.email,
+        full_name=payload.full_name,
+    )
+
+    session_data = await AuthService.create_session(
+        db,
+        user,
+        user_agent=request.headers.get("User-Agent"),
+        ip=request.client.host,
+    )
 
     return {
-        "access_token": access_token,
+        "access_token": session_data["access_token"],
         "token_type": "bearer",
         "user": {
             "id": str(user.id),
             "email": user.email,
             "full_name": user.full_name,
             "role": user.role,
-            "refresh_token": refresh_token,
+            "refresh_token": session_data["refresh_token"],
         },
     }
 
