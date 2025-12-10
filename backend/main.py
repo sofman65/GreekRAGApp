@@ -17,6 +17,8 @@ from app.core.middleware import (
     RequestLoggingMiddleware
 )
 from app.api.routes import auth, query, health, upload
+from app.db.engine import engine
+from sqlalchemy import text
 from app.services.query_orchestrator import QueryOrchestrator
 
 # Setup logging
@@ -82,6 +84,14 @@ async def startup_event():
     global rag_service, query_orchestrator
     
     try:
+        # Validate DB connectivity on startup
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            logger.info("✓ Database connection OK")
+        except Exception as db_exc:
+            logger.warning(f"⚠ Database connection failed: {db_exc}")
+
         config_path = _resolve_config_path()
         query_orchestrator = QueryOrchestrator(config_path)
         rag_service = query_orchestrator.rag_service

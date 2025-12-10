@@ -8,8 +8,12 @@ from jose import jwt, JWTError
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.db.session import get_db
+from app.models.user import User as UserModel
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -56,8 +60,11 @@ def decode_token(token: str) -> dict:
         )
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    """Get the current authenticated user from token"""
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> UserModel:
+    """Get the current authenticated user from token and database."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Μη εγκεκριμένα διαπιστευτήρια",
@@ -66,15 +73,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     
     try:
         payload = decode_token(token)
-        username: str = payload.get("sub")
-        
-        if username is None:
+        user_id: str = payload.get("sub")
+
+        if user_id is None:
             raise credentials_exception
-            
-        # In production, fetch user from database
-        # For now, return basic user info
-        return {"username": username}
-        
+
+        stmt = select(UserModel).where(UserModel.id == user_id)
+        res = await db.execute(stmt)
+        user = res.scalar_one_or_none()
+        if not user:
+            raise credentials_exception
+        return user
+
     except JWTError:
         raise credentials_exception
-

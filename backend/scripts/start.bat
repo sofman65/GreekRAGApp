@@ -1,7 +1,7 @@
 @echo off
 REM Ερμής Backend Startup Script for Windows
 
-echo Starting Ermis Backend Server...
+echo Starting pithia Backend Server...
 
 REM Activate virtual environment if it exists
 if exist "venv\Scripts\activate.bat" (

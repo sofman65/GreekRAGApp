@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 LABEL maintainer="Greek Army IT Division"
-LABEL description="Ερμής RAG Backend API"
+LABEL description="Pithia Backend API"
 
 # Set working directory
 WORKDIR /app

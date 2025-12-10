@@ -2,7 +2,7 @@
 Authentication models
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 
 
@@ -15,14 +15,14 @@ class Token(BaseModel):
 
 class UserCreate(BaseModel):
     """User registration model"""
-    username: str
+    email: EmailStr
     password: str
     full_name: Optional[str] = None
 
 
 class User(BaseModel):
     """User information model"""
-    username: str
+    id: str
+    email: EmailStr
     full_name: Optional[str] = None
-    role: str = "operator"
-
+    role: str = "user"
