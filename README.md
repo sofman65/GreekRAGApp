@@ -156,6 +156,60 @@ expires_at TIMESTAMP
 
 # 🔐 Authentication Flows
 
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant FE as Frontend (Next.js)
+    participant API as FastAPI Backend
+    participant AUTH as AuthService
+    participant DB as PostgreSQL (Users/Sessions)
+    participant APEX as APEX (Oracle)
+
+    Note over FE: User initiates Login
+
+    FE->>API: POST /auth/login (email + password)
+    API->>AUTH: authenticate_local()
+    AUTH->>DB: query users by email
+    DB-->>AUTH: user with password_hash
+    AUTH-->>API: user or fail
+
+    alt Local login success
+        API->>AUTH: create_session(user)
+        AUTH->>DB: INSERT session (refresh_token)
+        DB-->>AUTH: OK
+        AUTH-->>API: access_token + refresh_token
+        API-->>FE: Auth success
+    else Wrong password / missing user
+        API-->>FE: 401 Unauthorized
+    end
+
+    Note over FE,API: APEX Path (no password)
+
+    FE->>API: POST /auth/apex-login (apex_user_id, email, full_name)
+    API->>AUTH: authenticate_apex()
+
+    AUTH->>DB: find user by apex_user_id
+    DB-->>AUTH: user OR null
+
+    alt User exists
+        AUTH->>DB: UPDATE email/full_name (sync with APEX)
+        DB-->>AUTH: OK
+    else First-time APEX user
+        AUTH->>DB: INSERT new user (no password_hash)
+        DB-->>AUTH: OK
+    end
+
+    API->>AUTH: create_session(user)
+    AUTH->>DB: INSERT session with refresh_token
+    DB-->>AUTH: OK
+
+    AUTH-->>API: access_token + refresh_token
+    API-->>FE: Auth success
+
+```
+
+
 ## Local Login
 `POST /auth/login`
 
