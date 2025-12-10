@@ -1,5 +1,4 @@
-# 🚀 Πυθία — Greek Army RAG System  
-### *Retrieval-Augmented Generation Platform for Military Regulations*  
+# Ερμής (Hermes) - Greek Army RAG System
 
 <div align="center">
 
@@ -30,103 +29,104 @@
 - ⚡ **FastAPI + Next.js** για υψηλή απόδοση  
 - 📚 **PDF & Markdown ingestion** με embeddings  
 
+```mermaid
 %%{init: {'theme':'dark'}}%%
----
 flowchart TB
 
     APEX[APEX (Oracle)\napex_user_id / profile]
+
     FRONTEND[Next.js 16\nAuth UI / Chat UI\nSSE / WebSocket]
 
     API[FastAPI Backend\nHybrid Auth + Sessions\nRAG Orchestrator]
 
     PSQL[(PostgreSQL)\nUsers / Sessions\nConversations / Messages]
+
     WEAV[(Weaviate Vector DB)\nEmbeddings / Semantic Search]
+
     LLM[(LLM Provider\nOllama / Llama3)]
 
     APEX --> API
+
     FRONTEND <--> API
 
     API --> PSQL
+
     API --> WEAV
+
     WEAV --> LLM
+
     API --> LLM
-
-
-
-
----
+```
 
 # 🧬 Core Features
 
-### 🔐 Hybrid Authentication  
-- **Local Login** (email + password)  
-- **APEX Login** (no password)  
-- Automatic creation of **local mirror user** for every APEX login  
-- Refresh token rotation  
-- Sessions stored securely in PostgreSQL  
+### 🔐 Hybrid Authentication
+- Local Login (email + password)  
+- APEX Login (no password)  
+- Αυτόματη δημιουργία local mirror user για κάθε APEX login  
+- Refresh token rotation & sessions σε PostgreSQL  
 
-### 🔍 RAG Pipeline  
+### 🔍 RAG Pipeline
 - PDF / Markdown ingestion  
 - Intelligent chunking  
 - Embedding generation  
 - Weaviate vector search  
 - Reranker  
 - LLM reasoning  
-- Context-aware answers with citations  
+- Context-aware answers με citations  
 
-### 💬 Chat with history  
+### 💬 Chat with history
 - Conversations per user  
-- Messages stored with roles (user/assistant/system)
+- Messages stored with roles (user/assistant/system)  
 
-### 🐳 Full Docker Environment  
+### 🐳 Full Docker Environment
 - Backend API  
 - Frontend (Next.js)  
 - PostgreSQL  
 - Weaviate  
 
----
-
 # 🧱 Backend Structure
 
+```
 backend/
 ├── app/
-│ ├── api/
-│ │ └── routes/
-│ │ ├── auth.py
-│ │ ├── query.py
-│ │ ├── upload.py
-│ │ └── health.py
-│ ├── core/
-│ │ ├── config.py
-│ │ ├── security.py
-│ │ └── middleware.py
-│ ├── services/
-│ │ ├── auth.py
-│ │ ├── rag_service.py
-│ │ ├── embeddings.py
-│ │ └── vectordb.py
-│ ├── models/
-│ │ ├── user.py
-│ │ ├── session.py
-│ │ ├── conversation.py
-│ │ └── message.py
-│ ├── schemas/
-│ │ ├── auth.py
-│ │ ├── user.py
-│ │ ├── query.py
-│ │ └── rag.py
-│ ├── db/
-│ │ ├── engine.py
-│ │ ├── session.py
-│ │ └── migrations/
-│ └── main.py
+│   ├── api/
+│   │   └── routes/
+│   │       ├── auth.py
+│   │       ├── query.py
+│   │       ├── upload.py
+│   │       └── health.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── security.py
+│   │   └── middleware.py
+│   ├── services/
+│   │   ├── auth.py
+│   │   ├── rag_service.py
+│   │   ├── embeddings.py
+│   │   └── vectordb.py
+│   ├── models/
+│   │   ├── user.py
+│   │   ├── session.py
+│   │   ├── conversation.py
+│   │   └── message.py
+│   ├── schemas/
+│   │   ├── auth.py
+│   │   ├── user.py
+│   │   ├── query.py
+│   │   └── rag.py
+│   ├── db/
+│   │   ├── engine.py
+│   │   ├── session.py
+│   │   └── migrations/
+│   └── main.py
 └── Dockerfile
-
+```
 
 # 🗄️ Database Schema
 
-## **Users Table**
-
+**Users**
+```
 id UUID PK
 email CITEXT NULL
 password_hash TEXT NULL
@@ -135,51 +135,43 @@ full_name TEXT
 role TEXT DEFAULT 'user'
 created_at TIMESTAMP
 updated_at TIMESTAMP
+```
 
-markdown
-Copy code
-
-## **Sessions Table**
+**Sessions**
+```
 id UUID PK
 user_id UUID FK
 refresh_token TEXT UNIQUE
 user_agent TEXT
 ip_address TEXT
 expires_at TIMESTAMP
+```
 
-yaml
-Copy code
-
-## **Conversations & Messages**
-Chat history storage.
-
----
+**Conversations & Messages**
+- Chat history storage.
 
 # 🔐 Authentication Flows
 
-## **Local Login**
-POST /auth/login
-username=email
-password=***
+## Local Login
+`POST /auth/login`
 
-markdown
-Copy code
+Form fields:
+- `username=email`
+- `password=***`
 
-## **APEX Login**
-POST /auth/apex-login
+## APEX Login
+`POST /auth/apex-login`
+
+```json
 {
-"apex_user_id": "...',
-"email": "soldier@army.gr",
-"full_name": "ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ"
+  "apex_user_id": "...",
+  "email": "soldier@army.gr",
+  "full_name": "ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ"
 }
-
-yaml
-Copy code
+```
 
 ✔ Αν δεν υπάρχει χρήστης → δημιουργείται local mirror  
 ✔ Αν υπάρχει → ενημερώνεται το profile  
-
----
 
 # 🧮 RAG Pipeline Flow
 
@@ -193,18 +185,14 @@ Copy code
 8. LLM reasoning  
 9. Final answer with citations  
 
----
-
 # 🖥️ Frontend (Next.js 16)
 
 - Server Actions  
 - Secure token handling  
 - Login + APEX login  
-- Chat UI with streaming  
+- Chat UI with streaming (SSE / WebSocket)  
 - Tailwind + Radix UI + ShadCN  
 - Conversation history  
-
----
 
 # ⚙️ Quick Start
 
@@ -212,10 +200,39 @@ Copy code
 
 ```bash
 docker-compose up -d
+```
 
+Frontend: http://localhost:3000  
+Backend:  http://localhost:8000  
+Docs:     http://localhost:8000/api/docs  
 
+## Local Dev (manual)
 
+Backend
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp env.example .env
+python -m uvicorn app.main:app --reload --port 8000
+```
 
+Frontend
+```bash
+cd code
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
 
+# 🐛 Troubleshooting
 
+- **flash_attn warning**: optional; install `flash-attn` if you want faster attention on supported GPUs.
+- **Weaviate unreachable**: check `WEAVIATE_URL` and container status.
+- **Ollama model missing**: `ollama pull jobautomation/OpenEuroLLM-Greek:latest` (or the configured model).
+
+# 📄 License
+
+Internal use — Hellenic Armed Forces. Unauthorized use is prohibited.
 
