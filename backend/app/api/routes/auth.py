@@ -73,7 +73,11 @@ async def login(
     db: AsyncSession = Depends(get_db),
     request: Request = None,
 ):
-    user = await AuthService.authenticate_local(db, form_data.username, form_data.password)
+    user = await AuthService.authenticate_local(
+        db,
+        form_data.username,
+        form_data.password
+    )
 
     if not user:
         raise HTTPException(
@@ -86,7 +90,17 @@ async def login(
         ip=request.client.host,
     )
 
-    return session_data
+    return {
+        "access_token": session_data["access_token"],
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "refresh_token": session_data["refresh_token"],
+        }
+    }
 
 
 @router.post("/apex-login", response_model=Token)

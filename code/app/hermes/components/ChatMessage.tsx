@@ -48,12 +48,12 @@ export function ChatMessage({ message, isLast, isLoading, onRegenerate }: Props)
         {message.sources && message.sources.length > 0 && <ChatSources sources={message.sources} />}
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {message.timestamp.toLocaleTimeString("el-GR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
+        <span className="text-xs text-muted-foreground">
+          {message.timestamp.toLocaleTimeString("el-GR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
           <MessageActions
             content={message.content}
             onRegenerate={message.role === "assistant" && isLast && !isLoading ? onRegenerate : undefined}

@@ -1,3 +1,7 @@
+# .gitignore: start
+
+
+
 version: "3.9"
 
 services:
@@ -82,3 +86,5 @@ volumes:
 networks:
   pithia-network:
     driver: bridge
+
+# .gitignore: end

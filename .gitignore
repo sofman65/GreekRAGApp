@@ -40,10 +40,25 @@ out/
 .env.production
 .env.*.local
 backend/.env
+backend/.env.*
 backend/env.local
 code/.env.local
 code/.env.production.local
+code/.env.*.local
 !code/.env.local.example
+!backend/env.example
+!backend/.env.example
+
+# Secrets / keys
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+secrets/
+*.secret
+*.secrets
+*.enc
 
 # IDE
 .vscode/

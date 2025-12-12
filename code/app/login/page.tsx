@@ -66,13 +66,13 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium">
-                Όνομα Χρήστη
+              <label htmlFor="email" className="text-sm font-medium">
+                Email
               </label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Εισάγετε το όνομα χρήστη σας"
+                id="email"
+                type="email"
+                placeholder="Εισάγετε το email σας"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required

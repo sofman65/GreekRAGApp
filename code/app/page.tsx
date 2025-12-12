@@ -43,6 +43,14 @@ export default function HermesChat() {
   const currentConversationId = currentConversation?.id ?? state.currentConversationId
   const messages = currentConversation?.messages || []
 
+  // Redirect to login if no token
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+    if (!token) {
+      window.location.href = "/login"
+    }
+  }, [])
+
   const wsHandlers = useMemo(
     () => ({
       onSources: (sources: string[], mode?: string) => {
@@ -189,21 +197,21 @@ export default function HermesChat() {
             {showEmptyState ? (
               <EmptyState onPromptClick={handleSend} />
             ) : (
-              <div className="space-y-6">
-                {visibleMessages.map((message, index) => (
-                  <ChatMessage
-                    key={index}
-                    message={message}
-                    isLast={index === visibleMessages.length - 1}
-                    isLoading={isLoading}
+            <div className="space-y-6">
+              {visibleMessages.map((message, index) => (
+                <ChatMessage
+                  key={index}
+                  message={message}
+                  isLast={index === visibleMessages.length - 1}
+                  isLoading={isLoading}
                     onRegenerate={handleRegenerate}
-                  />
-                ))}
+                />
+              ))}
 
-                {showRetrievalLoader && <ChatLoading variant="rag" />}
-                {!showRetrievalLoader && showChatLoader && <ChatLoading variant="chat" />}
+              {showRetrievalLoader && <ChatLoading variant="rag" />}
+              {!showRetrievalLoader && showChatLoader && <ChatLoading variant="chat" />}
                 <div ref={messagesEndRef} />
-              </div>
+            </div>
             )}
           </ScrollArea>
 

@@ -8,9 +8,21 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Ερμής - Στρατιωτικό Σύστημα RAG",
+  title: "Πυθία - Στρατιωτικό Σύστημα RAG",
   description: "Σύστημα τεχνητής νοημοσύνης για διακλαδικούς κανονισμούς του Ελληνικού Στρατού",
-  generator: "v0.app",
+  keywords: ["στρατιωτικά έγγραφα", "διακλαδικοί κανονισμοί", "στρατιωτικά έγγραφα", "στρατιωτικά έγγραφα"],
+  authors: [{ name: "Ketak", url: "https://pithia.ketak.com" }],
+  creator: "Ketak",
+  publisher: "Ketak",
+  openGraph: {
+    title: "Πυθία - Στρατιωτικό Σύστημα RAG",
+    description: "Σύστημα τεχνητής νοημοσύνης για διακλαδικούς κανονισμούς του Ελληνικού Στρατού",
+    images: ["/ketak-sima.png"],
+    url: "https://pithia.ketak.com",
+    siteName: "Πυθία",
+    locale: "el",
+    type: "website",
+  },
   icons: {
     icon: [
       {

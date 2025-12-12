@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,7 +10,7 @@ import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function SignupPage() {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -28,13 +26,11 @@ export default function SignupPage() {
     try {
       const response = await fetch(`${apiUrl}/api/auth/signup`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username,
+          email,
           password,
-          full_name: fullName || username,
+          full_name: fullName || email,
         }),
       })
 
@@ -45,100 +41,62 @@ export default function SignupPage() {
 
       router.push("/login?registered=true")
     } catch (err: any) {
-      setError(err.message || "Το όνομα χρήστη υπάρχει ήδη")
+      setError(err.message || "Το email υπάρχει ήδη")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-background to-primary/5">
+      <Card className="max-w-md w-full shadow-2xl">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+          <div className="mx-auto h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center">
             <Logo className="h-16 w-16 text-primary" />
           </div>
-          <div>
-            <CardTitle className="text-2xl font-bold">Εγγραφή στο Ερμής</CardTitle>
-            <CardDescription className="mt-2">Δημιουργήστε νέο λογαριασμό χειριστή</CardDescription>
-          </div>
+          <CardTitle className="text-2xl font-bold">Εγγραφή</CardTitle>
+          <CardDescription>Δημιουργήστε νέο λογαριασμό χειριστή</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="fullName" className="text-sm font-medium">
-                Πλήρες Όνομα
-              </label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="π.χ. Ιωάννης Παπαδόπουλος"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={isLoading}
-                className="h-11"
-              />
+              <label className="text-sm font-medium">Πλήρες Όνομα</label>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium">
-                Όνομα Χρήστη
-              </label>
+              <label className="text-sm font-medium">Email</label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Επιλέξτε όνομα χρήστη"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                placeholder="you@example.com"
+                value={email}
                 required
-                disabled={isLoading}
-                className="h-11"
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Κωδικός Πρόσβασης
-              </label>
+              <label className="text-sm font-medium">Κωδικός</label>
               <Input
-                id="password"
                 type="password"
-                placeholder="Δημιουργήστε ασφαλή κωδικό"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading}
-                className="h-11"
                 minLength={4}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
-            {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+            {error && <div className="bg-red-200 text-red-800 p-3 rounded-lg">{error}</div>}
 
-            <Button type="submit" className="h-11 w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Δημιουργία...
-                </>
-              ) : (
-                "Δημιουργία Λογαριασμού"
-              )}
+            <Button type="submit" disabled={isLoading} className="w-full h-11">
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Εγγραφή"}
             </Button>
 
-            <div className="text-center text-sm text-muted-foreground">
-              Έχετε ήδη λογαριασμό;{" "}
-              <Link href="/login" className="font-semibold text-primary hover:underline">
-                Είσοδος
-              </Link>
-            </div>
-          </form>
-
-          <div className="mt-6 rounded-lg bg-yellow-500/10 p-4">
-            <p className="text-xs text-yellow-700 dark:text-yellow-400">
-              <strong>Σημείωση:</strong> Η εγγραφή είναι διαθέσιμη μόνο για εξουσιοδοτημένο στρατιωτικό προσωπικό.
+            <p className="text-sm text-center mt-2">
+              Έχετε ήδη λογαριασμό?{" "}
+              <Link href="/login" className="font-semibold text-primary">Είσοδος</Link>
             </p>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
