@@ -34,8 +34,9 @@ export default function SignupPage() {
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.detail || "Σφάλμα εγγραφής")
       }
 
@@ -54,9 +55,10 @@ export default function SignupPage() {
           <div className="mx-auto h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center">
             <Logo className="h-16 w-16 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Εγγραφή</CardTitle>
-          <CardDescription>Δημιουργήστε νέο λογαριασμό χειριστή</CardDescription>
+          <CardTitle className="text-2xl font-bold">Εγγραφή στην Πυθία</CardTitle>
+          <CardDescription>Δημιουργία λογαριασμού χειριστή</CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
@@ -65,10 +67,10 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
+              <label className="text-sm font-medium">Email Υπηρεσίας</label>
               <Input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="yourname@army.gr"
                 value={email}
                 required
                 onChange={(e) => setEmail(e.target.value)}
@@ -82,19 +84,26 @@ export default function SignupPage() {
                 value={password}
                 required
                 minLength={4}
+                placeholder="••••••••"
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
-            {error && <div className="bg-red-200 text-red-800 p-3 rounded-lg">{error}</div>}
+            {error && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
 
             <Button type="submit" disabled={isLoading} className="w-full h-11">
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Εγγραφή"}
             </Button>
 
             <p className="text-sm text-center mt-2">
-              Έχετε ήδη λογαριασμό?{" "}
-              <Link href="/login" className="font-semibold text-primary">Είσοδος</Link>
+              Έχετε ήδη λογαριασμό;{" "}
+              <Link href="/login" className="font-semibold text-primary">
+                Είσοδος
+              </Link>
             </p>
           </form>
         </CardContent>

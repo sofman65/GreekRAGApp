@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,7 +10,7 @@ import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -26,7 +24,7 @@ export default function LoginPage() {
 
     try {
       const formData = new FormData()
-      formData.append("username", username)
+      formData.append("username", email) // backend expects "username"
       formData.append("password", password)
 
       const response = await fetch(`${apiUrl}/api/auth/login`, {
@@ -34,12 +32,12 @@ export default function LoginPage() {
         body: formData,
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.detail || "Σφάλμα σύνδεσης")
       }
 
-      const data = await response.json()
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("user", JSON.stringify(data.user))
 
@@ -59,22 +57,25 @@ export default function LoginPage() {
             <Logo className="h-16 w-16 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Είσοδος στο Ερμής</CardTitle>
-            <CardDescription className="mt-2">Σύστημα RAG Ελληνικών Ενόπλων Δυνάμεων</CardDescription>
+            <CardTitle className="text-2xl font-bold">Είσοδος στην Πυθία</CardTitle>
+            <CardDescription className="mt-2">
+              Σύστημα RAG Ελληνικών Ενόπλων Δυνάμεων
+            </CardDescription>
           </div>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
-                Email
+                Email Υπηρεσίας
               </label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Εισάγετε το email σας"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                placeholder="yourname@army.gr"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
                 className="h-11"
@@ -88,7 +89,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Εισάγετε τον κωδικό σας"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -97,7 +98,11 @@ export default function LoginPage() {
               />
             </div>
 
-            {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+            {error && (
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
             <Button type="submit" className="h-11 w-full" disabled={isLoading}>
               {isLoading ? (
@@ -110,19 +115,13 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <div className="text-center text-sm text-muted-foreground">
+            <div className="text-center text-sm text-muted-foreground mt-1">
               Δεν έχετε λογαριασμό;{" "}
               <Link href="/signup" className="font-semibold text-primary hover:underline">
                 Εγγραφή
               </Link>
             </div>
           </form>
-
-          <div className="mt-6 space-y-2 rounded-lg bg-muted/50 p-4">
-            <p className="text-xs font-semibold text-muted-foreground">Demo Credentials:</p>
-            <p className="text-xs text-muted-foreground">Username: admin</p>
-            <p className="text-xs text-muted-foreground">Password: 1234</p>
-          </div>
         </CardContent>
       </Card>
     </div>

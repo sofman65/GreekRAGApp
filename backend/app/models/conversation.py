@@ -16,6 +16,7 @@ class Conversation(Base):
     )
 
     title: Mapped[str | None] = mapped_column(String)
+
     created_at: Mapped[str] = mapped_column(TIMESTAMP(timezone=True),
                                             server_default=text("CURRENT_TIMESTAMP"))
     updated_at: Mapped[str] = mapped_column(TIMESTAMP(timezone=True),
