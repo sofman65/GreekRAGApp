@@ -284,7 +284,7 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-# 🐛 Troubleshooting Steps for RCA
+# 🐛 Troubleshooting Steps for Root Cause Analysis
 
 - **flash_attn warning**: optional; install `flash-attn` if you want faster attention on supported GPUs.
 - **Weaviate unreachable**: check `WEAVIATE_URL` and container status.
