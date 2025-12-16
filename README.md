@@ -290,7 +290,5 @@ npm run dev
 - **Weaviate unreachable**: check `WEAVIATE_URL` and container status.
 - **Ollama model missing**: `ollama pull jobautomation/OpenEuroLLM-Greek:latest` (or the configured model).
 
-# 📄 License
 
-Internal use — Hellenic Armed Forces. Unauthorized use is prohibited.
 
